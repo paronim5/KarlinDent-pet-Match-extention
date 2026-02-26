@@ -50,6 +50,50 @@ def _ensure_timesheets_table(conn) -> None:
         conn.commit()
 
 
+def _ensure_timesheets_audit_table(conn) -> None:
+    cur = conn.cursor()
+    try:
+        cur.execute("SELECT 1 FROM timesheets_audit LIMIT 1")
+    except Exception:
+        conn.rollback()
+        cur = conn.cursor()
+        cur.execute(
+            """
+            CREATE TABLE IF NOT EXISTS timesheets_audit (
+                id SERIAL PRIMARY KEY,
+                timesheet_id INTEGER,
+                staff_id INTEGER NOT NULL REFERENCES staff(id),
+                action VARCHAR(20) NOT NULL,
+                old_data JSONB,
+                new_data JSONB,
+                changed_by_id INTEGER NOT NULL REFERENCES staff(id),
+                created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+            )
+            """
+        )
+        conn.commit()
+
+
+def _log_timesheet_change(conn, timesheet_id, staff_id, action, old_data, new_data, changed_by_id):
+    _ensure_timesheets_audit_table(conn)
+    cur = conn.cursor()
+    import json
+    cur.execute(
+        """
+        INSERT INTO timesheets_audit (timesheet_id, staff_id, action, old_data, new_data, changed_by_id)
+        VALUES (%s, %s, %s, %s, %s, %s)
+        """,
+        (
+            timesheet_id,
+            staff_id,
+            action,
+            json.dumps(old_data) if old_data else None,
+            json.dumps(new_data) if new_data else None,
+            changed_by_id
+        )
+    )
+
+
 def _ensure_salary_audit_table(conn) -> None:
     cur = conn.cursor()
     try:
@@ -301,12 +345,21 @@ def delete_outcome_record(record_id: int):
 
 
 @outcome_bp.route("/timesheets", methods=["GET"])
-@admin_required
 def list_timesheets():
+    user = get_current_user()
+    if not user:
+        return jsonify({"error": "unauthorized"}), 401
+    current_user_id, current_user_role = user
+
     staff_id_param = request.args.get("staff_id")
     if not staff_id_param:
         return jsonify([])
     staff_id = int(staff_id_param)
+
+    # Permission check: Only admin or the staff member themselves can view their timesheets
+    if current_user_role != "admin" and current_user_id != staff_id:
+        return jsonify({"error": "forbidden"}), 403
+
     today = date.today()
     start_param = request.args.get("from")
     end_param = request.args.get("to")
@@ -345,12 +398,22 @@ def list_timesheets():
 
 
 @outcome_bp.route("/timesheets", methods=["POST"])
-@admin_required
 def create_timesheet():
+    user = get_current_user()
+    if not user:
+        return jsonify({"error": "unauthorized"}), 401
+    current_user_id, current_user_role = user
+
     data = request.get_json(silent=True) or {}
     staff_id = data.get("staff_id")
     if not staff_id:
         return jsonify({"error": "invalid_staff"}), 400
+    staff_id = int(staff_id)
+
+    # Permission check: Only admin or the staff member themselves can add their timesheets
+    if current_user_role != "admin" and current_user_id != staff_id:
+        return jsonify({"error": "forbidden"}), 403
+
     work_date = parse_date(data.get("work_date")) if data.get("work_date") else date.today()
     start_raw = data.get("start_time")
     end_raw = data.get("end_time")
@@ -391,6 +454,24 @@ def create_timesheet():
             (staff_id, work_date, start_time, end_time, hours, note),
         )
         new_row = cur.fetchone()
+        timesheet_id = int(new_row[0])
+
+        _log_timesheet_change(
+            conn,
+            timesheet_id,
+            staff_id,
+            "create",
+            None,
+            {
+                "work_date": work_date.isoformat(),
+                "start_time": start_time.isoformat(),
+                "end_time": end_time.isoformat(),
+                "hours": hours,
+                "note": note,
+            },
+            current_user_id
+        )
+
         conn.commit()
     except Exception:
         conn.rollback()
@@ -398,7 +479,149 @@ def create_timesheet():
     finally:
         release_connection(conn)
 
-    return jsonify({"id": int(new_row[0]), "hours": hours}), 201
+    return jsonify({"id": timesheet_id, "hours": hours}), 201
+
+
+@outcome_bp.route("/timesheets/<int:ts_id>", methods=["PUT"])
+def update_timesheet(ts_id: int):
+    user = get_current_user()
+    if not user:
+        return jsonify({"error": "unauthorized"}), 401
+    current_user_id, current_user_role = user
+
+    data = request.get_json(silent=True) or {}
+    conn = get_connection()
+    try:
+        cur = conn.cursor()
+        cur.execute(
+            "SELECT staff_id, work_date, start_time, end_time, hours, note FROM staff_timesheets WHERE id = %s",
+            (ts_id,)
+        )
+        row = cur.fetchone()
+        if not row:
+            return jsonify({"error": "not_found"}), 404
+
+        staff_id = row[0]
+        # Permission check: Only admin or the staff member themselves can update their timesheets
+        if current_user_role != "admin" and current_user_id != staff_id:
+            return jsonify({"error": "forbidden"}), 403
+
+        old_data = {
+            "work_date": row[1].isoformat(),
+            "start_time": row[2].isoformat(),
+            "end_time": row[3].isoformat(),
+            "hours": float(row[4]),
+            "note": row[5]
+        }
+
+        work_date = parse_date(data.get("work_date")) if data.get("work_date") else row[1]
+        start_raw = data.get("start_time")
+        end_raw = data.get("end_time")
+        note = data.get("note") if "note" in data else row[5]
+
+        if start_raw:
+            start_time = datetime.strptime(start_raw, "%H:%M").time()
+        else:
+            start_time = row[2]
+
+        if end_raw:
+            end_time = datetime.strptime(end_raw, "%H:%M").time()
+        else:
+            end_time = row[3]
+
+        start_dt = datetime.combine(work_date, start_time)
+        end_dt = datetime.combine(work_date, end_time)
+        if end_dt <= start_dt:
+            return jsonify({"error": "invalid_times"}), 400
+        seconds = (end_dt - start_dt).seconds
+        hours = round(seconds / 3600.0, 2)
+
+        cur.execute(
+            """
+            UPDATE staff_timesheets
+            SET work_date = %s, start_time = %s, end_time = %s, hours = %s, note = %s
+            WHERE id = %s
+            """,
+            (work_date, start_time, end_time, hours, note, ts_id)
+        )
+
+        _log_timesheet_change(
+            conn,
+            ts_id,
+            staff_id,
+            "update",
+            old_data,
+            {
+                "work_date": work_date.isoformat() if hasattr(work_date, "isoformat") else work_date,
+                "start_time": start_time.isoformat() if hasattr(start_time, "isoformat") else start_time,
+                "end_time": end_time.isoformat() if hasattr(end_time, "isoformat") else end_time,
+                "hours": hours,
+                "note": note,
+            },
+            current_user_id
+        )
+
+        conn.commit()
+    except Exception:
+        conn.rollback()
+        raise
+    finally:
+        release_connection(conn)
+
+    return jsonify({"status": "ok", "hours": hours}), 200
+
+
+@outcome_bp.route("/timesheets/<int:ts_id>", methods=["DELETE"])
+def delete_timesheet(ts_id: int):
+    user = get_current_user()
+    if not user:
+        return jsonify({"error": "unauthorized"}), 401
+    current_user_id, current_user_role = user
+
+    conn = get_connection()
+    try:
+        cur = conn.cursor()
+        cur.execute(
+            "SELECT staff_id, work_date, start_time, end_time, hours, note FROM staff_timesheets WHERE id = %s",
+            (ts_id,)
+        )
+        row = cur.fetchone()
+        if not row:
+            return jsonify({"error": "not_found"}), 404
+
+        staff_id = row[0]
+        # Permission check: Only admin or the staff member themselves can delete their timesheets
+        if current_user_role != "admin" and current_user_id != staff_id:
+            return jsonify({"error": "forbidden"}), 403
+
+        old_data = {
+            "work_date": row[1].isoformat(),
+            "start_time": row[2].isoformat(),
+            "end_time": row[3].isoformat(),
+            "hours": float(row[4]),
+            "note": row[5]
+        }
+
+        cur.execute("DELETE FROM staff_timesheets WHERE id = %s", (ts_id,))
+
+        _log_timesheet_change(
+            conn,
+            ts_id,
+            staff_id,
+            "delete",
+            old_data,
+            None,
+            current_user_id
+        )
+
+        conn.commit()
+    except Exception:
+        conn.rollback()
+        raise
+    finally:
+        release_connection(conn)
+
+    return jsonify({"status": "ok"}), 200
 
 
 @outcome_bp.route("/salary/suggested", methods=["GET"])
@@ -431,6 +654,7 @@ def suggested_salary():
             return jsonify({"error": "invalid_staff"}), 400
         role_name = row[2]
         if role_name == "doctor":
+            # ... existing doctor code ...
             try:
                 cur.execute(
                     """
@@ -452,30 +676,29 @@ def suggested_salary():
                     (staff_id, start, end),
                 )
             total_earnings = float(cur.fetchone()[0] or 0)
+        elif role_name == "administrator":
+            base_salary = float(row[1] or 0)
+            total_earnings = base_salary
         else:
-            if role_name == "administrator":
-                base_salary = float(row[1] or 0)
-                total_earnings = base_salary
+            _ensure_timesheets_table(conn)
+            cur = conn.cursor()
+            cur.execute(
+                """
+                SELECT COALESCE(SUM(t.hours), 0) AS total_hours, s.base_salary
+                FROM staff_timesheets t
+                JOIN staff s ON s.id = t.staff_id
+                WHERE t.staff_id = %s AND t.work_date BETWEEN %s AND %s
+                GROUP BY s.base_salary
+                """,
+                (staff_id, start, end),
+            )
+            ts_row = cur.fetchone()
+            if not ts_row:
+                total_earnings = 0.0
             else:
-                _ensure_timesheets_table(conn)
-                cur = conn.cursor()
-                cur.execute(
-                    """
-                    SELECT COALESCE(SUM(t.hours), 0) AS total_hours, s.base_salary
-                    FROM staff_timesheets t
-                    JOIN staff s ON s.id = t.staff_id
-                    WHERE t.staff_id = %s AND t.work_date BETWEEN %s AND %s
-                    GROUP BY s.base_salary
-                    """,
-                    (staff_id, start, end),
-                )
-                ts_row = cur.fetchone()
-                if not ts_row:
-                    total_earnings = 0.0
-                else:
-                    total_hours = float(ts_row[0] or 0)
-                    base_salary = float(ts_row[1] or 0)
-                    total_earnings = round(total_hours * base_salary, 2)
+                total_hours = float(ts_row[0] or 0)
+                base_salary = float(ts_row[1] or 0)
+                total_earnings = round(total_hours * base_salary, 2)
 
         cur = conn.cursor()
         cur.execute(
@@ -766,6 +989,7 @@ def create_salary_payment():
         cycle_start = payment_date.replace(day=1)
 
         if role_name == "doctor":
+            # ... existing doctor code ...
             try:
                 cur = conn.cursor()
                 cur.execute(
@@ -788,29 +1012,28 @@ def create_salary_payment():
                     (staff_id, cycle_start, payment_date),
                 )
             total_earnings = float(cur.fetchone()[0] or 0)
+        elif role_name == "administrator":
+            total_earnings = staff_base_salary
         else:
-            if role_name == "administrator":
-                total_earnings = staff_base_salary
+            _ensure_timesheets_table(conn)
+            cur = conn.cursor()
+            cur.execute(
+                """
+                SELECT COALESCE(SUM(t.hours), 0) AS total_hours, s.base_salary
+                FROM staff_timesheets t
+                JOIN staff s ON s.id = t.staff_id
+                WHERE t.staff_id = %s AND t.work_date BETWEEN %s AND %s
+                GROUP BY s.base_salary
+                """,
+                (staff_id, cycle_start, payment_date),
+            )
+            ts_row = cur.fetchone()
+            if not ts_row:
+                total_earnings = 0.0
             else:
-                _ensure_timesheets_table(conn)
-                cur = conn.cursor()
-                cur.execute(
-                    """
-                    SELECT COALESCE(SUM(t.hours), 0) AS total_hours, s.base_salary
-                    FROM staff_timesheets t
-                    JOIN staff s ON s.id = t.staff_id
-                    WHERE t.staff_id = %s AND t.work_date BETWEEN %s AND %s
-                    GROUP BY s.base_salary
-                    """,
-                    (staff_id, cycle_start, payment_date),
-                )
-                ts_row = cur.fetchone()
-                if not ts_row:
-                    total_earnings = 0.0
-                else:
-                    total_hours = float(ts_row[0] or 0)
-                    base_salary = float(ts_row[1] or 0)
-                    total_earnings = round(total_hours * base_salary, 2)
+                total_hours = float(ts_row[0] or 0)
+                base_salary = float(ts_row[1] or 0)
+                total_earnings = round(total_hours * base_salary, 2)
 
         cur = conn.cursor()
         cur.execute(
