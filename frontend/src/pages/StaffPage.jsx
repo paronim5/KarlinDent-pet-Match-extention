@@ -240,18 +240,10 @@ export default function StaffPage() {
                         <Link to={`/staff/doctor/${member.id}`}>
                           {member.last_name} {member.first_name}
                         </Link>
-                      ) : member.role === "administrator" ? (
-                        <Link to={`/staff/administrator/${member.id}`}>
-                          {member.last_name} {member.first_name}
-                        </Link>
-                      ) : member.role === "assistant" ? (
-                        <Link to={`/staff/assistant/${member.id}`}>
-                          {member.last_name} {member.first_name}
-                        </Link>
                       ) : (
-                        <>
+                        <Link to={`/staff/role/${member.id}`}>
                           {member.last_name} {member.first_name}
-                        </>
+                        </Link>
                       )}
                     </td>
                     <td>{member.phone}</td>

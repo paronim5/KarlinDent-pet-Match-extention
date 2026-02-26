@@ -636,9 +636,6 @@ def suggested_salary():
                     (staff_id, start, end),
                 )
             total_earnings = float(cur.fetchone()[0] or 0)
-        elif role_name == "administrator":
-            base_salary = float(row[1] or 0)
-            total_earnings = base_salary
         else:
             _ensure_timesheets_table(conn)
             cur = conn.cursor()
@@ -840,14 +837,9 @@ def staff_self_dashboard():
 
         base_rate = base_salary
         overtime_rate = base_rate * 1.5
-        if role_name == "administrator":
-            base_pay = base_salary
-            overtime_pay = 0.0
-            total_pay = base_salary
-        else:
-            base_pay = round(total_regular * base_rate, 2)
-            overtime_pay = round(total_overtime * overtime_rate, 2)
-            total_pay = round(base_pay + overtime_pay, 2)
+        base_pay = round(total_regular * base_rate, 2)
+        overtime_pay = round(total_overtime * overtime_rate, 2)
+        total_pay = round(base_pay + overtime_pay, 2)
 
         cur = conn.cursor()
         cur.execute(
@@ -968,8 +960,6 @@ def create_salary_payment():
                     (staff_id, cycle_start, payment_date),
                 )
             total_earnings = float(cur.fetchone()[0] or 0)
-        elif role_name == "administrator":
-            total_earnings = staff_base_salary
         else:
             _ensure_timesheets_table(conn)
             cur = conn.cursor()

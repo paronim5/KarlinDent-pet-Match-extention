@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useParams, Link } from "react-router-dom";
 import { useApi } from "../api/client.js";
 
-export default function AdministratorPage() {
+export default function StaffRolePage() {
   const { id } = useParams();
   const api = useApi();
   const today = new Date().toISOString().slice(0, 10);
@@ -47,9 +47,6 @@ export default function AdministratorPage() {
 
   const totalWages = useMemo(() => {
     const base = staff && staff.base_salary ? Number(staff.base_salary) : 0;
-    if (staff && staff.role === "administrator") {
-      return base.toFixed(2);
-    }
     return (totalHours * base).toFixed(2);
   }, [staff, totalHours]);
 
@@ -124,10 +121,12 @@ export default function AdministratorPage() {
     await loadAll(from, to);
   };
 
+  const title = staff ? staff.role.charAt(0).toUpperCase() + staff.role.slice(1) : "Staff member";
+
   return (
     <div className="page page-staff-role">
       <div className="card-header">
-        <h1>Administrator</h1>
+        <h1>{title}</h1>
         <div>
           <Link to="/staff">← Back to Staff</Link>
         </div>

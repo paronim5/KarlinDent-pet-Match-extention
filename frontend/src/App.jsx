@@ -5,8 +5,7 @@ import IncomePage from "./pages/IncomePage.jsx";
 import OutcomePage from "./pages/OutcomePage.jsx";
 import StaffPage from "./pages/StaffPage.jsx";
 import DoctorPage from "./pages/DoctorPage.jsx";
-import AdministratorPage from "./pages/AdministratorPage.jsx";
-import AssistantPage from "./pages/AssistantPage.jsx";
+import StaffRolePage from "./pages/StaffRolePage.jsx";
 import StaffIncomeDashboard from "./pages/StaffIncomeDashboard.jsx";
 import Layout from "./components/Layout.jsx";
 
@@ -45,8 +44,7 @@ function AppRoutes() {
         <Route path="/outcome" element={<OutcomePage />} />
         <Route path="/staff" element={<StaffPage />} />
         <Route path="/staff/doctor/:id" element={<DoctorPage />} />
-        <Route path="/staff/administrator/:id" element={<AdministratorPage />} />
-        <Route path="/staff/assistant/:id" element={<AssistantPage />} />
+        <Route path="/staff/role/:id" element={<StaffRolePage />} />
         <Route path="/my-income" element={<StaffIncomeDashboard />} />
         <Route path="*" element={<Navigate to="/clinic" replace />} />
       </Routes>
