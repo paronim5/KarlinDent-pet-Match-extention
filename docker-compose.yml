@@ -1,0 +1,40 @@
+version: "3.9"
+
+services:
+  db:
+    image: postgres:16
+    environment:
+      POSTGRES_DB: policlinic
+      POSTGRES_USER: policlinic
+      POSTGRES_PASSWORD: policlinic
+    ports:
+      - "5432:5432"
+    volumes:
+      - db_data:/var/lib/postgresql/data
+      - ./schema.sql:/docker-entrypoint-initdb.d/01_schema.sql:ro
+      - ./migrations/001_add_staff_password_and_vendor.sql:/docker-entrypoint-initdb.d/02_add_staff_password_and_vendor.sql:ro
+
+  backend:
+    build: ./backend
+    depends_on:
+      - db
+    environment:
+      DB_HOST: db
+      DB_PORT: 5432
+      DB_NAME: policlinic
+      DB_USER: policlinic
+      DB_PASSWORD: policlinic
+      SECRET_KEY: change-me
+    ports:
+      - "5000:5000"
+
+  frontend:
+    build: ./frontend
+    depends_on:
+      - backend
+    ports:
+      - "8080:80"
+
+volumes:
+  db_data:
+

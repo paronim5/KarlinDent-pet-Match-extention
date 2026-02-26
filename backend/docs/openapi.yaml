@@ -1,0 +1,632 @@
+openapi: 3.0.3
+info:
+  title: Policlinic Management API
+  version: 1.0.0
+servers:
+  - url: /
+paths:
+  /api/auth/login:
+    post:
+      summary: Administrator login
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                email:
+                  type: string
+                  format: email
+                password:
+                  type: string
+              required:
+                - email
+                - password
+      responses:
+        "200":
+          description: Authenticated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  access_token:
+                    type: string
+                  user:
+                    $ref: "#/components/schemas/User"
+        "401":
+          description: Invalid credentials
+  /api/auth/me:
+    get:
+      summary: Current administrator profile
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Profile
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+        "401":
+          description: Unauthorized
+  /api/clinic/dashboard:
+    get:
+      summary: Clinic dashboard data
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: query
+          name: from
+          schema:
+            type: string
+            format: date
+        - in: query
+          name: to
+          schema:
+            type: string
+            format: date
+      responses:
+        "200":
+          description: Dashboard data
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  lease_cost:
+                    type: number
+                    format: float
+                  avg_payment_per_patient:
+                    type: number
+                    format: float
+                  avg_salary_by_role:
+                    type: object
+                    additionalProperties:
+                      type: number
+                      format: float
+                  daily_pnl:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/DailyPnl"
+  /api/clinic/daily-pnl/export/csv:
+    get:
+      summary: Export daily P&L as CSV
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: CSV export
+          content:
+            text/csv:
+              schema:
+                type: string
+                format: binary
+  /api/clinic/daily-pnl/export/pdf:
+    get:
+      summary: Export daily P&L as PDF
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: PDF export
+          content:
+            application/pdf:
+              schema:
+                type: string
+                format: binary
+  /api/income/patients:
+    get:
+      summary: List or search patients
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: query
+          name: q
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Patients
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Patient"
+  /api/income/records:
+    get:
+      summary: List income records
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: query
+          name: from
+          schema:
+            type: string
+            format: date
+        - in: query
+          name: to
+          schema:
+            type: string
+            format: date
+      responses:
+        "200":
+          description: Income records
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/IncomeRecord"
+    post:
+      summary: Create income record
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateIncomeRecordRequest"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: integer
+        "400":
+          description: Validation error
+  /api/income/summary/daily:
+    get:
+      summary: Daily income summary
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Daily summary
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/DailyIncomeSummary"
+  /api/income/summary/monthly:
+    get:
+      summary: Monthly income summary
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Monthly summary
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/MonthlyIncomeSummary"
+  /api/outcome/categories:
+    get:
+      summary: Outcome categories
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Categories
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/OutcomeCategory"
+  /api/outcome/records:
+    get:
+      summary: Outcome records
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Outcome records
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/OutcomeRecord"
+    post:
+      summary: Create outcome record
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateOutcomeRecordRequest"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: integer
+  /api/outcome/salaries:
+    get:
+      summary: Salary payments
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Salary payments
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/SalaryPayment"
+    post:
+      summary: Create salary payment
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateSalaryPaymentRequest"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: integer
+  /api/outcome/summary/monthly:
+    get:
+      summary: Monthly outcome summary
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Monthly outcome summary
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/MonthlyOutcomeSummary"
+  /api/outcome/summary/monthly/export/csv:
+    get:
+      summary: Export monthly outcome summary as CSV
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: CSV export
+          content:
+            text/csv:
+              schema:
+                type: string
+                format: binary
+  /api/staff:
+    get:
+      summary: Staff directory
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: query
+          name: role
+          schema:
+            type: string
+        - in: query
+          name: q
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Staff
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/StaffMember"
+    post:
+      summary: Create staff member
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateStaffRequest"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: integer
+  /api/staff/roles:
+    get:
+      summary: Staff roles
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Roles
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/StaffRole"
+  /api/staff/{staff_id}/password:
+    post:
+      summary: Set staff password
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: staff_id
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                password:
+                  type: string
+      responses:
+        "200":
+          description: Password updated
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  schemas:
+    User:
+      type: object
+      properties:
+        id:
+          type: integer
+        first_name:
+          type: string
+        last_name:
+          type: string
+        email:
+          type: string
+        role:
+          type: string
+    Patient:
+      type: object
+      properties:
+        id:
+          type: integer
+        first_name:
+          type: string
+        last_name:
+          type: string
+        phone:
+          type: string
+        email:
+          type: string
+    IncomeRecord:
+      type: object
+      properties:
+        id:
+          type: integer
+        service_date:
+          type: string
+          format: date
+        amount:
+          type: number
+          format: float
+        payment_method:
+          type: string
+          enum:
+            - cash
+            - card
+        note:
+          type: string
+        patient:
+          $ref: "#/components/schemas/Patient"
+        doctor:
+          $ref: "#/components/schemas/StaffMember"
+    CreateIncomeRecordRequest:
+      type: object
+      properties:
+        patient_id:
+          type: integer
+        patient:
+          $ref: "#/components/schemas/Patient"
+        doctor_id:
+          type: integer
+        amount:
+          type: number
+        payment_method:
+          type: string
+          enum:
+            - cash
+            - card
+        service_date:
+          type: string
+          format: date
+        note:
+          type: string
+    DailyIncomeSummary:
+      type: object
+      properties:
+        day:
+          type: string
+          format: date
+        total_income:
+          type: number
+    MonthlyIncomeSummary:
+      type: object
+      properties:
+        month:
+          type: string
+          format: date
+        total_income:
+          type: number
+    OutcomeCategory:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+    OutcomeRecord:
+      type: object
+      properties:
+        id:
+          type: integer
+        expense_date:
+          type: string
+          format: date
+        amount:
+          type: number
+        description:
+          type: string
+        vendor:
+          type: string
+        category:
+          type: string
+    CreateOutcomeRecordRequest:
+      type: object
+      properties:
+        category_id:
+          type: integer
+        amount:
+          type: number
+        expense_date:
+          type: string
+          format: date
+        description:
+          type: string
+        vendor:
+          type: string
+    SalaryPayment:
+      type: object
+      properties:
+        id:
+          type: integer
+        payment_date:
+          type: string
+          format: date
+        amount:
+          type: number
+        note:
+          type: string
+        staff:
+          $ref: "#/components/schemas/StaffMember"
+    CreateSalaryPaymentRequest:
+      type: object
+      properties:
+        staff_id:
+          type: integer
+        amount:
+          type: number
+        payment_date:
+          type: string
+          format: date
+        note:
+          type: string
+    MonthlyOutcomeSummary:
+      type: object
+      properties:
+        month:
+          type: string
+          format: date
+        outcome_total:
+          type: number
+        salary_total:
+          type: number
+        total_outcome:
+          type: number
+    StaffRole:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+    StaffMember:
+      type: object
+      properties:
+        id:
+          type: integer
+        first_name:
+          type: string
+        last_name:
+          type: string
+        phone:
+          type: string
+        email:
+          type: string
+        bio:
+          type: string
+        base_salary:
+          type: number
+        last_paid_at:
+          type: string
+          format: date
+          nullable: true
+        total_revenue:
+          type: number
+        is_active:
+          type: boolean
+        role:
+          type: string
+    CreateStaffRequest:
+      type: object
+      properties:
+        first_name:
+          type: string
+        last_name:
+          type: string
+        phone:
+          type: string
+        email:
+          type: string
+        bio:
+          type: string
+        role:
+          type: string
+        base_salary:
+          type: number
+    DailyPnl:
+      type: object
+      properties:
+        day:
+          type: string
+          format: date
+        total_income:
+          type: number
+        total_outcome:
+          type: number
+        pnl:
+          type: number
+
