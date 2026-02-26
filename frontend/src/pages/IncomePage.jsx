@@ -48,8 +48,6 @@ export default function IncomePage() {
   const [form, setForm] = useState({
     patientId: "",
     newPatientLastName: "",
-    newPatientPhone: "",
-    newPatientEmail: "",
     doctorId: "",
     amount: "",
     paymentMethod: "cash",
@@ -158,9 +156,7 @@ export default function IncomePage() {
         payload.patient_id = Number(form.patientId);
       } else {
         payload.patient = {
-          last_name: form.newPatientLastName,
-          phone: form.newPatientPhone || undefined,
-          email: form.newPatientEmail || undefined
+          last_name: form.newPatientLastName
         };
       }
 
@@ -168,8 +164,6 @@ export default function IncomePage() {
       setForm({
         patientId: "",
         newPatientLastName: "",
-        newPatientPhone: "",
-        newPatientEmail: "",
         doctorId: "",
         amount: "",
         paymentMethod: "cash",
@@ -308,7 +302,7 @@ export default function IncomePage() {
           doctorId: doc.id,
           doctorName: `${doc.last_name} ${doc.first_name}`,
           patientId: patient.id,
-          patientName: `${patient.last_name} ${patient.first_name}`,
+          patientName: `${patient.last_name}`,
           totalIncome: patient.total_income,
           totalCommission: patient.total_commission
         });
@@ -331,7 +325,7 @@ export default function IncomePage() {
                 type="text"
                 value={patientQuery}
                 onChange={handlePatientSearchChange}
-                placeholder="Type name or email"
+                placeholder="Type name"
               />
             </label>
             <label>
@@ -345,7 +339,7 @@ export default function IncomePage() {
                 <option value="">New patient</option>
                 {patients.map((patient) => (
                   <option key={patient.id} value={patient.id}>
-                    {patient.last_name} {patient.first_name}
+                    {patient.last_name}
                   </option>
                 ))}
               </select>
@@ -359,25 +353,6 @@ export default function IncomePage() {
                     value={form.newPatientLastName}
                     onChange={(event) =>
                       setForm((prev) => ({ ...prev, newPatientLastName: event.target.value }))
-                    }
-                  />
-                </label>
-                <label>
-                  Phone
-                  <input
-                    value={form.newPatientPhone}
-                    onChange={(event) =>
-                      setForm((prev) => ({ ...prev, newPatientPhone: event.target.value }))
-                    }
-                  />
-                </label>
-                <label>
-                  Email
-                  <input
-                    type="email"
-                    value={form.newPatientEmail}
-                    onChange={(event) =>
-                      setForm((prev) => ({ ...prev, newPatientEmail: event.target.value }))
                     }
                   />
                 </label>
@@ -700,7 +675,7 @@ export default function IncomePage() {
                     </td>
                     <td>{record.service_date}</td>
                     <td>
-                      {record.patient.last_name} {record.patient.first_name}
+                      {record.patient.last_name}
                     </td>
                     <td>
                       {record.doctor.last_name} {record.doctor.first_name}
