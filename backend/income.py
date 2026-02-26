@@ -521,7 +521,6 @@ def doctor_stats_by_patient():
 
 
 @income_bp.route("/summary/daily", methods=["GET"])
-@admin_required
 def daily_summary():
     today = date.today()
     start_param = request.args.get("from")
@@ -567,7 +566,6 @@ def daily_summary():
 
 
 @income_bp.route("/summary/monthly", methods=["GET"])
-@admin_required
 def monthly_summary():
     payment_method_param = request.args.get("payment_method")
     if payment_method_param:
@@ -605,7 +603,6 @@ def monthly_summary():
 
 
 @income_bp.route("/summary/total", methods=["GET"])
-@admin_required
 def total_summary():
     today = date.today()
     start_param = request.args.get("from")
@@ -663,7 +660,6 @@ def total_summary():
 
 
 @income_bp.route("/doctor/<int:doctor_id>/overview", methods=["GET"])
-@admin_required
 def doctor_overview(doctor_id: int):
     today = date.today()
     conn = get_connection()
@@ -784,7 +780,6 @@ def doctor_overview(doctor_id: int):
 
 
 @income_bp.route("/doctor/<int:doctor_id>/summary/daily", methods=["GET"])
-@admin_required
 def doctor_daily_summary(doctor_id: int):
     today = date.today()
     start_param = request.args.get("from")
@@ -855,7 +850,6 @@ def doctor_daily_summary(doctor_id: int):
 
 
 @income_bp.route("/doctor/<int:doctor_id>/summary/monthly", methods=["GET"])
-@admin_required
 def doctor_monthly_summary(doctor_id: int):
     conn = get_connection()
     try:

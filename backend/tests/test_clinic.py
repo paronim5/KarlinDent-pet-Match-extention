@@ -1,18 +1,14 @@
 from datetime import date
 
 from backend.app import create_app
-from backend import auth as auth_module
 from backend import clinic as clinic_module
 
 
 def _authorized_headers():
-    return {"Authorization": "Bearer token"}
+    return {}
 
 
 def test_export_daily_pnl_csv(monkeypatch):
-    def fake_get_current_user():
-        return 1, "administrator"
-
     def fake_fetch_daily_pnl(start: date, end: date):
         return [
             {
@@ -23,7 +19,6 @@ def test_export_daily_pnl_csv(monkeypatch):
             }
         ]
 
-    monkeypatch.setattr(auth_module, "get_current_user", fake_get_current_user)
     monkeypatch.setattr(clinic_module, "fetch_daily_pnl", fake_fetch_daily_pnl)
 
     app = create_app(testing=True)
@@ -42,9 +37,6 @@ def test_export_daily_pnl_csv(monkeypatch):
 
 
 def test_export_daily_pnl_pdf(monkeypatch):
-    def fake_get_current_user():
-        return 1, "administrator"
-
     def fake_fetch_daily_pnl(start: date, end: date):
         return [
             {
@@ -55,7 +47,6 @@ def test_export_daily_pnl_pdf(monkeypatch):
             }
         ]
 
-    monkeypatch.setattr(auth_module, "get_current_user", fake_get_current_user)
     monkeypatch.setattr(clinic_module, "fetch_daily_pnl", fake_fetch_daily_pnl)
 
     app = create_app(testing=True)
