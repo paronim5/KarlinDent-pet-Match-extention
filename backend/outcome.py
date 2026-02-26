@@ -348,7 +348,7 @@ def delete_outcome_record(record_id: int):
 def list_timesheets():
     user = get_current_user()
     if not user:
-        return jsonify({"error": "unauthorized"}), 401
+        return jsonify({"error": "unauthorized", "message": "Missing or invalid token"}), 401
     current_user_id, current_user_role = user
 
     staff_id_param = request.args.get("staff_id")
@@ -357,8 +357,8 @@ def list_timesheets():
     staff_id = int(staff_id_param)
 
     # Permission check: Only admin or the staff member themselves can view their timesheets
-    if current_user_role != "admin" and current_user_id != staff_id:
-        return jsonify({"error": "forbidden"}), 403
+    if current_user_role != "admin" and current_user_role != "administrator" and current_user_id != staff_id:
+        return jsonify({"error": "forbidden", "message": "You do not have permission to view these timesheets"}), 403
 
     today = date.today()
     start_param = request.args.get("from")
@@ -401,7 +401,7 @@ def list_timesheets():
 def create_timesheet():
     user = get_current_user()
     if not user:
-        return jsonify({"error": "unauthorized"}), 401
+        return jsonify({"error": "unauthorized", "message": "Missing or invalid token"}), 401
     current_user_id, current_user_role = user
 
     data = request.get_json(silent=True) or {}
@@ -411,8 +411,8 @@ def create_timesheet():
     staff_id = int(staff_id)
 
     # Permission check: Only admin or the staff member themselves can add their timesheets
-    if current_user_role != "admin" and current_user_id != staff_id:
-        return jsonify({"error": "forbidden"}), 403
+    if current_user_role != "admin" and current_user_role != "administrator" and current_user_id != staff_id:
+        return jsonify({"error": "forbidden", "message": "You do not have permission to add these timesheets"}), 403
 
     work_date = parse_date(data.get("work_date")) if data.get("work_date") else date.today()
     start_raw = data.get("start_time")
@@ -486,7 +486,7 @@ def create_timesheet():
 def update_timesheet(ts_id: int):
     user = get_current_user()
     if not user:
-        return jsonify({"error": "unauthorized"}), 401
+        return jsonify({"error": "unauthorized", "message": "Missing or invalid token"}), 401
     current_user_id, current_user_role = user
 
     data = request.get_json(silent=True) or {}
@@ -503,8 +503,8 @@ def update_timesheet(ts_id: int):
 
         staff_id = row[0]
         # Permission check: Only admin or the staff member themselves can update their timesheets
-        if current_user_role != "admin" and current_user_id != staff_id:
-            return jsonify({"error": "forbidden"}), 403
+        if current_user_role != "admin" and current_user_role != "administrator" and current_user_id != staff_id:
+            return jsonify({"error": "forbidden", "message": "You do not have permission to update this shift"}), 403
 
         old_data = {
             "work_date": row[1].isoformat(),
@@ -575,7 +575,7 @@ def update_timesheet(ts_id: int):
 def delete_timesheet(ts_id: int):
     user = get_current_user()
     if not user:
-        return jsonify({"error": "unauthorized"}), 401
+        return jsonify({"error": "unauthorized", "message": "Missing or invalid token"}), 401
     current_user_id, current_user_role = user
 
     conn = get_connection()
@@ -591,8 +591,8 @@ def delete_timesheet(ts_id: int):
 
         staff_id = row[0]
         # Permission check: Only admin or the staff member themselves can delete their timesheets
-        if current_user_role != "admin" and current_user_id != staff_id:
-            return jsonify({"error": "forbidden"}), 403
+        if current_user_role != "admin" and current_user_role != "administrator" and current_user_id != staff_id:
+            return jsonify({"error": "forbidden", "message": "You do not have permission to delete this shift"}), 403
 
         old_data = {
             "work_date": row[1].isoformat(),

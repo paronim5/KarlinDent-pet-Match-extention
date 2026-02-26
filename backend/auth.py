@@ -29,16 +29,19 @@ def create_access_token(user_id: int, role: str) -> str:
 def decode_access_token(token: str) -> Optional[Dict[str, Any]]:
     try:
         return jwt.decode(token, config.SECRET_KEY, algorithms=[config.JWT_ALGORITHM])
-    except jwt.PyJWTError:
+    except jwt.PyJWTError as e:
+        print(f"JWT decode error: {e}")
         return None
 
 
 def get_token_from_header() -> Optional[str]:
     auth_header = request.headers.get("Authorization")
     if not auth_header:
+        print("Authorization header missing")
         return None
     parts = auth_header.split()
     if len(parts) != 2 or parts[0].lower() != "bearer":
+        print(f"Invalid Authorization header format: {auth_header}")
         return None
     return parts[1]
 
@@ -56,6 +59,14 @@ def get_current_user() -> Optional[Tuple[int, str]]:
 def admin_required(fn):
     @wraps(fn)
     def wrapper(*args, **kwargs):
+        user = get_current_user()
+        if not user:
+            print("admin_required: User not found from token")
+            return jsonify({"error": "unauthorized", "message": "User not found from token"}), 401
+        user_id, role = user
+        if role != "admin" and role != "administrator":
+            print(f"admin_required: Forbidden for role {role}")
+            return jsonify({"error": "forbidden", "message": f"Forbidden for role {role}"}), 403
         return fn(*args, **kwargs)
 
     return wrapper
