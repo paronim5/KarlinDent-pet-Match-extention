@@ -4,7 +4,6 @@ from typing import Any, Dict, List, Optional
 import psycopg2
 from flask import Blueprint, jsonify, request
 
-from .auth import admin_required
 from .config import config
 from .db import get_connection, release_connection
 
@@ -63,7 +62,6 @@ def ensure_patient(conn, patient_id: Optional[int], patient_data: Dict[str, Any]
 
 
 @income_bp.route("/patients", methods=["GET"])
-@admin_required
 def list_patients():
     q = request.args.get("q", "").strip()
 
@@ -106,7 +104,6 @@ def list_patients():
 
 
 @income_bp.route("/records", methods=["GET"])
-@admin_required
 def list_income_records():
     today = date.today()
     start_param = request.args.get("from")
@@ -177,7 +174,6 @@ def list_income_records():
 
 
 @income_bp.route("/records/<int:record_id>", methods=["DELETE"])
-@admin_required
 def delete_income_record(record_id: int):
     conn = get_connection()
     try:
@@ -205,7 +201,6 @@ def delete_income_record(record_id: int):
 
 
 @income_bp.route("/records", methods=["POST"])
-@admin_required
 def create_income_record():
     data = request.get_json(silent=True) or {}
 
@@ -310,7 +305,6 @@ def create_income_record():
 
 
 @income_bp.route("/stats/doctors-by-patient", methods=["GET"])
-@admin_required
 def doctor_stats_by_patient():
     patient_last_name = request.args.get("patient_last_name", "").strip().lower()
     if not patient_last_name:

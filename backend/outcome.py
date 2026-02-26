@@ -6,7 +6,6 @@ from typing import Any, Dict, List
 from flask import Blueprint, Response, jsonify, request
 import psycopg2
 
-from .auth import admin_required, get_current_user
 from .db import get_connection, release_connection
 
 
@@ -157,7 +156,6 @@ def _evaluate_salary_withdrawal(total_earnings: float, already_paid: float, requ
 
 
 @outcome_bp.route("/categories", methods=["GET"])
-@admin_required
 def list_categories():
     conn = get_connection()
     try:
@@ -178,7 +176,6 @@ def list_categories():
 
 
 @outcome_bp.route("/records", methods=["GET"])
-@admin_required
 def list_outcome_records():
     today = date.today()
     start_param = request.args.get("from")
@@ -259,7 +256,6 @@ def list_outcome_records():
 
 
 @outcome_bp.route("/records", methods=["POST"])
-@admin_required
 def create_outcome_record():
     data = request.get_json(silent=True) or {}
 
@@ -325,7 +321,6 @@ def create_outcome_record():
 
 
 @outcome_bp.route("/records/<int:record_id>", methods=["DELETE"])
-@admin_required
 def delete_outcome_record(record_id: int):
     conn = get_connection()
     try:
@@ -346,19 +341,10 @@ def delete_outcome_record(record_id: int):
 
 @outcome_bp.route("/timesheets", methods=["GET"])
 def list_timesheets():
-    user = get_current_user()
-    if not user:
-        return jsonify({"error": "unauthorized", "message": "Missing or invalid token"}), 401
-    current_user_id, current_user_role = user
-
     staff_id_param = request.args.get("staff_id")
     if not staff_id_param:
         return jsonify([])
     staff_id = int(staff_id_param)
-
-    # Permission check: Only admin or the staff member themselves can view their timesheets
-    if current_user_role != "admin" and current_user_role != "administrator" and current_user_id != staff_id:
-        return jsonify({"error": "forbidden", "message": "You do not have permission to view these timesheets"}), 403
 
     today = date.today()
     start_param = request.args.get("from")
@@ -399,20 +385,11 @@ def list_timesheets():
 
 @outcome_bp.route("/timesheets", methods=["POST"])
 def create_timesheet():
-    user = get_current_user()
-    if not user:
-        return jsonify({"error": "unauthorized", "message": "Missing or invalid token"}), 401
-    current_user_id, current_user_role = user
-
     data = request.get_json(silent=True) or {}
     staff_id = data.get("staff_id")
     if not staff_id:
         return jsonify({"error": "invalid_staff"}), 400
     staff_id = int(staff_id)
-
-    # Permission check: Only admin or the staff member themselves can add their timesheets
-    if current_user_role != "admin" and current_user_role != "administrator" and current_user_id != staff_id:
-        return jsonify({"error": "forbidden", "message": "You do not have permission to add these timesheets"}), 403
 
     work_date = parse_date(data.get("work_date")) if data.get("work_date") else date.today()
     start_raw = data.get("start_time")
@@ -469,7 +446,7 @@ def create_timesheet():
                 "hours": hours,
                 "note": note,
             },
-            current_user_id
+            staff_id # Fallback changed_by_id to staff_id since login removed
         )
 
         conn.commit()
@@ -484,11 +461,6 @@ def create_timesheet():
 
 @outcome_bp.route("/timesheets/<int:ts_id>", methods=["PUT"])
 def update_timesheet(ts_id: int):
-    user = get_current_user()
-    if not user:
-        return jsonify({"error": "unauthorized", "message": "Missing or invalid token"}), 401
-    current_user_id, current_user_role = user
-
     data = request.get_json(silent=True) or {}
     conn = get_connection()
     try:
@@ -502,9 +474,6 @@ def update_timesheet(ts_id: int):
             return jsonify({"error": "not_found"}), 404
 
         staff_id = row[0]
-        # Permission check: Only admin or the staff member themselves can update their timesheets
-        if current_user_role != "admin" and current_user_role != "administrator" and current_user_id != staff_id:
-            return jsonify({"error": "forbidden", "message": "You do not have permission to update this shift"}), 403
 
         old_data = {
             "work_date": row[1].isoformat(),
@@ -558,7 +527,7 @@ def update_timesheet(ts_id: int):
                 "hours": hours,
                 "note": note,
             },
-            current_user_id
+            staff_id # Fallback changed_by_id to staff_id since login removed
         )
 
         conn.commit()
@@ -573,11 +542,6 @@ def update_timesheet(ts_id: int):
 
 @outcome_bp.route("/timesheets/<int:ts_id>", methods=["DELETE"])
 def delete_timesheet(ts_id: int):
-    user = get_current_user()
-    if not user:
-        return jsonify({"error": "unauthorized", "message": "Missing or invalid token"}), 401
-    current_user_id, current_user_role = user
-
     conn = get_connection()
     try:
         cur = conn.cursor()
@@ -590,9 +554,6 @@ def delete_timesheet(ts_id: int):
             return jsonify({"error": "not_found"}), 404
 
         staff_id = row[0]
-        # Permission check: Only admin or the staff member themselves can delete their timesheets
-        if current_user_role != "admin" and current_user_role != "administrator" and current_user_id != staff_id:
-            return jsonify({"error": "forbidden", "message": "You do not have permission to delete this shift"}), 403
 
         old_data = {
             "work_date": row[1].isoformat(),
@@ -611,7 +572,7 @@ def delete_timesheet(ts_id: int):
             "delete",
             old_data,
             None,
-            current_user_id
+            staff_id # Fallback changed_by_id to staff_id since login removed
         )
 
         conn.commit()
@@ -625,7 +586,6 @@ def delete_timesheet(ts_id: int):
 
 
 @outcome_bp.route("/salary/suggested", methods=["GET"])
-@admin_required
 def suggested_salary():
     staff_id_param = request.args.get("staff_id")
     if not staff_id_param:
@@ -730,7 +690,6 @@ def suggested_salary():
 
 
 @outcome_bp.route("/salaries", methods=["GET"])
-@admin_required
 def list_salary_payments():
     today = date.today()
     start_param = request.args.get("from")
@@ -780,7 +739,6 @@ def list_salary_payments():
 
 
 @outcome_bp.route("/salaries/<int:salary_id>", methods=["DELETE"])
-@admin_required
 def delete_salary_payment(salary_id: int):
     conn = get_connection()
     try:
@@ -812,12 +770,11 @@ def delete_salary_payment(salary_id: int):
 
 @outcome_bp.route("/staff/self/dashboard", methods=["GET"])
 def staff_self_dashboard():
-    user = get_current_user()
-    if not user:
-        return jsonify({"error": "unauthorized"}), 401
-    staff_id, role = user
-    if role == "doctor":
-        return jsonify({"error": "forbidden"}), 403
+    staff_id_param = request.args.get("staff_id")
+    if not staff_id_param:
+        return jsonify({"error": "missing_staff_id"}), 400
+    staff_id = int(staff_id_param)
+
     today = date.today()
     start_param = request.args.get("from")
     end_param = request.args.get("to")
@@ -947,7 +904,6 @@ def staff_self_dashboard():
 
 
 @outcome_bp.route("/salaries", methods=["POST"])
-@admin_required
 def create_salary_payment():
     data = request.get_json(silent=True) or {}
 
@@ -1113,7 +1069,6 @@ def create_salary_payment():
 
 
 @outcome_bp.route("/summary/monthly", methods=["GET"])
-@admin_required
 def monthly_outcome_summary():
     items = _compute_monthly_outcome_summary()
     return jsonify(items)
@@ -1168,7 +1123,6 @@ def _compute_monthly_outcome_summary() -> List[Dict[str, Any]]:
 
 
 @outcome_bp.route("/summary/monthly/export/csv", methods=["GET"])
-@admin_required
 def export_monthly_outcome_csv():
     summary = _compute_monthly_outcome_summary()
 

@@ -8,7 +8,6 @@ from reportlab.lib.pagesizes import A4
 from reportlab.lib.units import mm
 from reportlab.pdfgen import canvas
 
-from .auth import admin_required
 from .db import get_connection, release_connection
 
 
@@ -74,7 +73,6 @@ def compute_doctor_avg_salary(start: date, end: date) -> float:
 
 
 @clinic_bp.route("/dashboard", methods=["GET"])
-@admin_required
 def dashboard():
     today = date.today()
     start_param = request.args.get("from")
@@ -120,7 +118,6 @@ def dashboard():
 
 
 @clinic_bp.route("/daily-pnl/export/csv", methods=["GET"])
-@admin_required
 def export_daily_pnl_csv():
     today = date.today()
     start_param = request.args.get("from")
@@ -156,7 +153,6 @@ def export_daily_pnl_csv():
 
 
 @clinic_bp.route("/daily-pnl/export/pdf", methods=["GET"])
-@admin_required
 def export_daily_pnl_pdf():
     today = date.today()
     start_param = request.args.get("from")

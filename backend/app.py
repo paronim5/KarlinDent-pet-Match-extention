@@ -1,11 +1,8 @@
-from datetime import timedelta
-
 from flask import Flask, jsonify, Response, send_from_directory
 from flask_cors import CORS
 
 from .config import config
 from .db import close_pool, init_db_pool
-from .auth import auth_bp
 from .clinic import clinic_bp
 from .income import income_bp
 from .outcome import outcome_bp
@@ -15,9 +12,6 @@ from .staff import staff_bp
 def create_app(testing: bool = False) -> Flask:
     app = Flask(__name__)
     app.config["SECRET_KEY"] = config.SECRET_KEY
-    app.config["PERMANENT_SESSION_LIFETIME"] = timedelta(
-        minutes=config.ACCESS_TOKEN_EXPIRES_MINUTES
-    )
 
     app.config["TESTING"] = testing
 
@@ -26,7 +20,6 @@ def create_app(testing: bool = False) -> Flask:
     if not testing:
         init_db_pool()
 
-    app.register_blueprint(auth_bp, url_prefix="/api/auth")
     app.register_blueprint(clinic_bp, url_prefix="/api/clinic")
     app.register_blueprint(income_bp, url_prefix="/api/income")
     app.register_blueprint(outcome_bp, url_prefix="/api/outcome")

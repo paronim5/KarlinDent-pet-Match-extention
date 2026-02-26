@@ -8,10 +8,6 @@ class Config:
     DB_NAME = os.environ.get("DB_NAME", "policlinic")
     DB_USER = os.environ.get("DB_USER", "policlinic")
     DB_PASSWORD = os.environ.get("DB_PASSWORD", "policlinic")
-    JWT_ALGORITHM = "HS256"
-    ACCESS_TOKEN_EXPIRES_MINUTES = int(
-        os.environ.get("ACCESS_TOKEN_EXPIRES_MINUTES", "60")
-    )
     CORS_ORIGINS = os.environ.get("CORS_ORIGINS", "*")
     DOCTOR_COMMISSION_RATE = float(os.environ.get("DOCTOR_COMMISSION_RATE", "0.3"))
 

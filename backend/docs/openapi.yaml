@@ -5,57 +5,9 @@ info:
 servers:
   - url: /
 paths:
-  /api/auth/login:
-    post:
-      summary: Administrator login
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              properties:
-                email:
-                  type: string
-                  format: email
-                password:
-                  type: string
-              required:
-                - email
-                - password
-      responses:
-        "200":
-          description: Authenticated
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  access_token:
-                    type: string
-                  user:
-                    $ref: "#/components/schemas/User"
-        "401":
-          description: Invalid credentials
-  /api/auth/me:
-    get:
-      summary: Current administrator profile
-      security:
-        - bearerAuth: []
-      responses:
-        "200":
-          description: Profile
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/User"
-        "401":
-          description: Unauthorized
   /api/clinic/dashboard:
     get:
       summary: Clinic dashboard data
-      security:
-        - bearerAuth: []
       parameters:
         - in: query
           name: from
@@ -93,8 +45,6 @@ paths:
   /api/clinic/daily-pnl/export/csv:
     get:
       summary: Export daily P&L as CSV
-      security:
-        - bearerAuth: []
       responses:
         "200":
           description: CSV export
@@ -106,8 +56,6 @@ paths:
   /api/clinic/daily-pnl/export/pdf:
     get:
       summary: Export daily P&L as PDF
-      security:
-        - bearerAuth: []
       responses:
         "200":
           description: PDF export
@@ -119,8 +67,6 @@ paths:
   /api/income/patients:
     get:
       summary: List or search patients
-      security:
-        - bearerAuth: []
       parameters:
         - in: query
           name: q
@@ -138,8 +84,6 @@ paths:
   /api/income/records:
     get:
       summary: List income records
-      security:
-        - bearerAuth: []
       parameters:
         - in: query
           name: from
@@ -162,8 +106,6 @@ paths:
                   $ref: "#/components/schemas/IncomeRecord"
     post:
       summary: Create income record
-      security:
-        - bearerAuth: []
       requestBody:
         required: true
         content:
@@ -185,8 +127,6 @@ paths:
   /api/income/summary/daily:
     get:
       summary: Daily income summary
-      security:
-        - bearerAuth: []
       responses:
         "200":
           description: Daily summary
@@ -199,8 +139,6 @@ paths:
   /api/income/summary/monthly:
     get:
       summary: Monthly income summary
-      security:
-        - bearerAuth: []
       responses:
         "200":
           description: Monthly summary
@@ -213,8 +151,6 @@ paths:
   /api/outcome/categories:
     get:
       summary: Outcome categories
-      security:
-        - bearerAuth: []
       responses:
         "200":
           description: Categories
@@ -227,8 +163,6 @@ paths:
   /api/outcome/records:
     get:
       summary: Outcome records
-      security:
-        - bearerAuth: []
       responses:
         "200":
           description: Outcome records
@@ -240,8 +174,6 @@ paths:
                   $ref: "#/components/schemas/OutcomeRecord"
     post:
       summary: Create outcome record
-      security:
-        - bearerAuth: []
       requestBody:
         required: true
         content:
@@ -261,8 +193,6 @@ paths:
   /api/outcome/salaries:
     get:
       summary: Salary payments
-      security:
-        - bearerAuth: []
       responses:
         "200":
           description: Salary payments
@@ -274,8 +204,6 @@ paths:
                   $ref: "#/components/schemas/SalaryPayment"
     post:
       summary: Create salary payment
-      security:
-        - bearerAuth: []
       requestBody:
         required: true
         content:
@@ -295,8 +223,6 @@ paths:
   /api/outcome/summary/monthly:
     get:
       summary: Monthly outcome summary
-      security:
-        - bearerAuth: []
       responses:
         "200":
           description: Monthly outcome summary
@@ -309,8 +235,6 @@ paths:
   /api/outcome/summary/monthly/export/csv:
     get:
       summary: Export monthly outcome summary as CSV
-      security:
-        - bearerAuth: []
       responses:
         "200":
           description: CSV export
@@ -322,8 +246,6 @@ paths:
   /api/staff:
     get:
       summary: Staff directory
-      security:
-        - bearerAuth: []
       parameters:
         - in: query
           name: role
@@ -344,8 +266,6 @@ paths:
                   $ref: "#/components/schemas/StaffMember"
     post:
       summary: Create staff member
-      security:
-        - bearerAuth: []
       requestBody:
         required: true
         content:
@@ -365,8 +285,6 @@ paths:
   /api/staff/roles:
     get:
       summary: Staff roles
-      security:
-        - bearerAuth: []
       responses:
         "200":
           description: Roles
@@ -379,8 +297,6 @@ paths:
   /api/staff/{staff_id}/password:
     post:
       summary: Set staff password
-      security:
-        - bearerAuth: []
       parameters:
         - in: path
           name: staff_id
@@ -400,11 +316,6 @@ paths:
         "200":
           description: Password updated
 components:
-  securitySchemes:
-    bearerAuth:
-      type: http
-      scheme: bearer
-      bearerFormat: JWT
   schemas:
     User:
       type: object

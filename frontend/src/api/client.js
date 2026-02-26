@@ -1,13 +1,8 @@
-import { useAuth } from "../App.jsx";
-
 const API_BASE = "/api";
 
-export async function apiRequest(path, options = {}, token) {
+export async function apiRequest(path, options = {}) {
   const headers = new Headers(options.headers || {});
   headers.set("Content-Type", "application/json");
-  if (token) {
-    headers.set("Authorization", `Bearer ${token}`);
-  }
 
   const response = await fetch(`${API_BASE}${path}`, {
     ...options,
@@ -36,18 +31,18 @@ export async function apiRequest(path, options = {}, token) {
 }
 
 export function useApi() {
-  const { token } = useAuth();
   return {
-    get: (path) => apiRequest(path, { method: "GET" }, token),
+    get: (path) => apiRequest(path, { method: "GET" }),
     post: (path, body) =>
-      apiRequest(
-        path,
-        {
-          method: "POST",
-          body: JSON.stringify(body)
-        },
-        token
-      ),
-    delete: (path) => apiRequest(path, { method: "DELETE" }, token)
+      apiRequest(path, {
+        method: "POST",
+        body: JSON.stringify(body)
+      }),
+    put: (path, body) =>
+      apiRequest(path, {
+        method: "PUT",
+        body: JSON.stringify(body)
+      }),
+    delete: (path) => apiRequest(path, { method: "DELETE" })
   };
 }

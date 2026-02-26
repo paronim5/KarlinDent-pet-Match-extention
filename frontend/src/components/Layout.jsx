@@ -1,10 +1,8 @@
 import { useEffect, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
-import { useAuth } from "../App.jsx";
 
 export default function Layout({ children }) {
   const location = useLocation();
-  const auth = useAuth();
   const [theme, setTheme] = useState("light");
 
   useEffect(() => {
@@ -33,16 +31,6 @@ export default function Layout({ children }) {
           >
             {theme === "light" ? "Dark theme" : "White theme"}
           </button>
-          {auth.user && (
-            <>
-              <span>
-                {auth.user.first_name} {auth.user.last_name}
-              </span>
-              <button type="button" onClick={auth.logout}>
-                Logout
-              </button>
-            </>
-          )}
         </div>
       </header>
       <div className="app-body">

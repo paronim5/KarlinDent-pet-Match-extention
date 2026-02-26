@@ -1,6 +1,5 @@
-import { useEffect, useState, createContext, useContext } from "react";
-import { Navigate, Route, Routes, useLocation, useNavigate } from "react-router-dom";
-import LoginPage from "./pages/LoginPage.jsx";
+import { useEffect, createContext } from "react";
+import { Navigate, Route, Routes, useNavigate } from "react-router-dom";
 import ClinicPage from "./pages/ClinicPage.jsx";
 import IncomePage from "./pages/IncomePage.jsx";
 import OutcomePage from "./pages/OutcomePage.jsx";
@@ -14,122 +13,42 @@ import Layout from "./components/Layout.jsx";
 const AuthContext = createContext(null);
 
 function useAuth() {
-  return useContext(AuthContext);
+  // Auth removed: Return a mock admin user
+  return {
+    user: { id: 1, first_name: "Admin", last_name: "User", role: "admin" },
+    token: "mock-token",
+    login: () => {},
+    logout: () => {}
+  };
 }
 
 function AuthProvider({ children }) {
-  const [token, setToken] = useState(() => localStorage.getItem("token"));
-  const [user, setUser] = useState(() => {
-    const raw = localStorage.getItem("user");
-    return raw ? JSON.parse(raw) : null;
-  });
-
-  const login = (newToken, newUser) => {
-    setToken(newToken);
-    setUser(newUser);
-    localStorage.setItem("token", newToken);
-    localStorage.setItem("user", JSON.stringify(newUser));
-  };
-
-  const logout = () => {
-    setToken(null);
-    setUser(null);
-    localStorage.removeItem("token");
-    localStorage.removeItem("user");
-  };
-
-  const value = { token, user, login, logout };
-
+  const value = useAuth();
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
-}
-
-function ProtectedRoute({ children }) {
-  return children;
 }
 
 function AppRoutes() {
   const navigate = useNavigate();
 
   useEffect(() => {
-    navigate("/clinic", { replace: true });
-  }, []);
+    // Initial redirect to clinic if at root
+    if (window.location.pathname === "/") {
+      navigate("/clinic", { replace: true });
+    }
+  }, [navigate]);
 
   return (
     <Layout>
       <Routes>
-        <Route path="/login" element={<LoginPage />} />
-        <Route
-          path="/clinic"
-          element={
-            <ProtectedRoute>
-              <ClinicPage />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/income"
-          element={
-            <ProtectedRoute>
-              <IncomePage />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/outcome"
-          element={
-            <ProtectedRoute>
-              <OutcomePage />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/staff"
-          element={
-            <ProtectedRoute>
-              <StaffPage />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/staff/doctor/:id"
-          element={
-            <ProtectedRoute>
-              <DoctorPage />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/staff/administrator/:id"
-          element={
-            <ProtectedRoute>
-              <AdministratorPage />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/staff/assistant/:id"
-          element={
-            <ProtectedRoute>
-              <AssistantPage />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/my-income"
-          element={
-            <ProtectedRoute>
-              <StaffIncomeDashboard />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="*"
-          element={
-            <ProtectedRoute>
-              <Navigate to="/clinic" replace />
-            </ProtectedRoute>
-          }
-        />
+        <Route path="/clinic" element={<ClinicPage />} />
+        <Route path="/income" element={<IncomePage />} />
+        <Route path="/outcome" element={<OutcomePage />} />
+        <Route path="/staff" element={<StaffPage />} />
+        <Route path="/staff/doctor/:id" element={<DoctorPage />} />
+        <Route path="/staff/administrator/:id" element={<AdministratorPage />} />
+        <Route path="/staff/assistant/:id" element={<AssistantPage />} />
+        <Route path="/my-income" element={<StaffIncomeDashboard />} />
+        <Route path="*" element={<Navigate to="/clinic" replace />} />
       </Routes>
     </Layout>
   );

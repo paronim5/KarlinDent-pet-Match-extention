@@ -118,17 +118,7 @@ export default function StaffPage() {
     }
   };
 
-  const handleSetPassword = async (member) => {
-    const password = window.prompt(`Set new password for ${member.first_name} ${member.last_name}`);
-    if (!password) {
-      return;
-    }
-    try {
-      await api.post(`/staff/${member.id}/password`, { password });
-    } catch (err) {
-      setError(err.message || "Unable to set password");
-    }
-  };
+
 
   const handleRemove = async (member) => {
     const confirmed = window.confirm(
@@ -302,11 +292,6 @@ export default function StaffPage() {
                         {member.role === "doctor" && (
                           <button type="button" onClick={() => handleEditCommission(member)}>
                             Edit commission
-                          </button>
-                        )}
-                        {member.role === "administrator" && (
-                          <button type="button" onClick={() => handleSetPassword(member)}>
-                            Set password
                           </button>
                         )}
                         <button

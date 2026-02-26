@@ -2,9 +2,7 @@ from typing import Any, Dict, List, Optional
 
 import psycopg2
 from flask import Blueprint, jsonify, request
-from werkzeug.security import generate_password_hash
 
-from .auth import admin_required
 from .config import config
 from .db import get_connection, release_connection
 
@@ -33,7 +31,6 @@ def get_role_id(conn, role_name: str) -> Optional[int]:
 
 
 @staff_bp.route("/roles", methods=["GET"])
-@admin_required
 def list_roles():
     conn = get_connection()
     try:
@@ -54,7 +51,6 @@ def list_roles():
 
 
 @staff_bp.route("", methods=["GET"])
-@admin_required
 def list_staff():
     role = request.args.get("role")
     q = request.args.get("q", "").strip()
@@ -195,7 +191,6 @@ def list_staff():
 
 
 @staff_bp.route("", methods=["POST"])
-@admin_required
 def create_staff():
     data = request.get_json(silent=True) or {}
 
@@ -287,7 +282,6 @@ def create_staff():
 
 
 @staff_bp.route("/<int:staff_id>", methods=["DELETE"])
-@admin_required
 def deactivate_staff(staff_id: int):
     conn = get_connection()
     try:
@@ -315,7 +309,6 @@ def deactivate_staff(staff_id: int):
 
 
 @staff_bp.route("/<int:staff_id>/restore", methods=["POST"])
-@admin_required
 def restore_staff(staff_id: int):
     conn = get_connection()
     try:
@@ -342,103 +335,22 @@ def restore_staff(staff_id: int):
     return jsonify({"status": "ok"})
 
 
-@staff_bp.route("/<int:staff_id>/password", methods=["POST"])
-@admin_required
-def set_staff_password(staff_id: int):
+@staff_bp.route("/<int:staff_id>/commission", methods=["POST"])
+def update_staff_commission(staff_id: int):
     data = request.get_json(silent=True) or {}
-    password = data.get("password")
-
-    if not password or len(password) < 8:
-        return jsonify({"error": "invalid_password"}), 400
-
-    password_hash = generate_password_hash(password)
+    rate = data.get("rate")
+    if rate is None:
+        return jsonify({"error": "missing_rate"}), 400
 
     conn = get_connection()
     try:
         cur = conn.cursor()
         cur.execute(
-            "SELECT id FROM staff WHERE id = %s",
-            (staff_id,),
-        )
-        row = cur.fetchone()
-        if not row:
-            return jsonify({"error": "staff_not_found"}), 404
-
-        cur.execute(
-            "UPDATE staff SET password_hash = %s WHERE id = %s",
-            (password_hash, staff_id),
+            "UPDATE staff SET commission_rate = %s WHERE id = %s",
+            (float(rate), staff_id),
         )
         conn.commit()
-    except Exception:
-        conn.rollback()
-        raise
     finally:
         release_connection(conn)
 
     return jsonify({"status": "ok"})
-
-
-@staff_bp.route("/<int:staff_id>/commission", methods=["POST"])
-@admin_required
-def update_staff_commission(staff_id: int):
-    data = request.get_json(silent=True) or {}
-    commission_rate_value = data.get("commission_rate")
-
-    try:
-        commission_rate = float(commission_rate_value or 0)
-    except (TypeError, ValueError):
-        return jsonify({"error": "invalid_commission_rate"}), 400
-
-    if commission_rate < 0 or commission_rate > 1:
-        return jsonify({"error": "invalid_commission_rate"}), 400
-
-    commission_rate = round(commission_rate, 4)
-
-    conn = get_connection()
-    try:
-        cur = conn.cursor()
-        cur.execute(
-            """
-            SELECT s.id
-            FROM staff s
-            JOIN staff_roles r ON r.id = s.role_id
-            WHERE s.id = %s AND r.name = 'doctor' AND s.is_active = TRUE
-            """,
-            (staff_id,),
-        )
-        row = cur.fetchone()
-        if not row:
-            return jsonify({"error": "staff_not_found"}), 404
-
-        try:
-            cur.execute(
-                "UPDATE staff SET commission_rate = %s WHERE id = %s",
-                (commission_rate, staff_id),
-            )
-        except psycopg2.errors.UndefinedColumn:
-            conn.rollback()
-            cur = conn.cursor()
-            try:
-                cur.execute(
-                    """
-                    ALTER TABLE staff
-                    ADD COLUMN commission_rate NUMERIC(5,4) NOT NULL DEFAULT 0
-                    """
-                )
-                conn.commit()
-            except psycopg2.errors.DuplicateColumn:
-                conn.rollback()
-            cur = conn.cursor()
-            cur.execute(
-                "UPDATE staff SET commission_rate = %s WHERE id = %s",
-                (commission_rate, staff_id),
-            )
-
-        conn.commit()
-    except Exception:
-        conn.rollback()
-        raise
-    finally:
-        release_connection(conn)
-
-    return jsonify({"status": "ok", "commission_rate": commission_rate})
