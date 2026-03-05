@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import { useApi } from "../api/client.js";
 
 const emptyForm = {
@@ -14,6 +15,7 @@ const emptyForm = {
 };
 
 export default function StaffPage() {
+  const { t } = useTranslation();
   const api = useApi();
 
   const [staff, setStaff] = useState([]);
@@ -48,7 +50,7 @@ export default function StaffPage() {
       const items = await api.get(`/staff?${params.toString()}`);
       setStaff(items);
     } catch (err) {
-      setError(err.message || "Unable to load staff directory");
+      setError(err.message || t("staff.errors.load_staff"));
     } finally {
       setLoading(false);
     }
@@ -161,20 +163,20 @@ export default function StaffPage() {
       <div className="panel">
         <div className="panel-header">
           <div>
-            <div className="panel-title">Staff Roster</div>
+            <div className="panel-title">{t("staff.title")}</div>
             <div className="panel-meta">{filteredStaff.length} active members</div>
           </div>
           <div className="topbar-actions">
-            <input className="form-input" placeholder="Search..." value={search} onChange={(e) => setSearch(e.target.value)} />
-            <button className="btn btn-primary" onClick={() => setShowForm(true)}>+ Recruit</button>
+            <input className="form-input" placeholder={t("common.search")} value={search} onChange={(e) => setSearch(e.target.value)} />
+            <button className="btn btn-primary" onClick={() => setShowForm(true)}>+ {t("staff.add_staff")}</button>
           </div>
         </div>
         <div className="table-wrapper">
           <table className="data-table">
             <thead>
               <tr>
-                <th>Name</th>
-                <th>Role</th>
+                <th>{t("staff.table.name")}</th>
+                <th>{t("staff.table.role")}</th>
                 <th>Base/Commission</th>
                 <th>Total Earned</th>
                 <th>Actions</th>
@@ -196,7 +198,7 @@ export default function StaffPage() {
                   </td>
                   <td>
                     <span className={`pill ${member.role === 'doctor' ? 'pill-blue' : 'pill-orange'}`}>
-                      {member.role}
+                      {t(`staff.roles.${member.role}`)}
                     </span>
                   </td>
                   <td className="mono">
@@ -206,7 +208,7 @@ export default function StaffPage() {
                     {member.commission_income.toLocaleString(undefined, { style: "currency", currency: "CZK" })}
                   </td>
                   <td>
-                    <button className="pay-btn" onClick={() => member.role === 'doctor' ? navigate(`/staff/doctor/${member.id}`) : navigate(`/staff/role/${member.id}`)}>View</button>
+                    <button className="pay-btn" onClick={() => member.role === 'doctor' ? navigate(`/staff/doctor/${member.id}`) : navigate(`/staff/role/${member.id}`)}>{t("common.view")}</button>
                   </td>
                 </tr>
               ))}
@@ -218,7 +220,7 @@ export default function StaffPage() {
       {showForm && (
         <div className="modal-backdrop">
           <div className="quick-form" style={{ width: '100%', maxWidth: '500px' }}>
-            <div className="panel-title" style={{ marginBottom: '16px' }}>Recruit New Staff</div>
+            <div className="panel-title" style={{ marginBottom: '16px' }}>{t("staff.add_staff")}</div>
             <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
               <div className="form-grid">
                 <div>
@@ -231,7 +233,7 @@ export default function StaffPage() {
                 </div>
               </div>
               <div>
-                <div className="form-label">Role</div>
+                <div className="form-label">{t("staff.table.role")}</div>
                 <select className="form-input" value={form.role} onChange={(e) => setForm(p => ({...p, role: e.target.value}))}>
                   {roles.map((r) => <option key={r.id} value={r.name}>{r.name}</option>)}
                 </select>
@@ -251,8 +253,8 @@ export default function StaffPage() {
                 </div>
               </div>
               <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px', marginTop: '16px' }}>
-                <button type="button" className="btn btn-ghost" onClick={() => setShowForm(false)}>Cancel</button>
-                <button type="submit" className="btn btn-primary" disabled={saving}>{saving ? 'Saving...' : 'Recruit'}</button>
+                <button type="button" className="btn btn-ghost" onClick={() => setShowForm(false)}>{t("common.cancel")}</button>
+                <button type="submit" className="btn btn-primary" disabled={saving}>{saving ? t("common.loading") : t("common.save")}</button>
               </div>
             </form>
           </div>

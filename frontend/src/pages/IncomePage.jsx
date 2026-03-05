@@ -1,15 +1,17 @@
 import { useEffect, useMemo, useState } from "react";
 import { Chart as ChartJS, CategoryScale, LinearScale, PointElement, LineElement, BarElement, Tooltip, Legend } from "chart.js";
 import { Bar, Line } from "react-chartjs-2";
+import { useTranslation } from "react-i18next";
 import { useApi } from "../api/client.js";
 
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, BarElement, Tooltip, Legend);
 
 function DateRangePicker({ from, to, onChange }) {
+  const { t } = useTranslation();
   return (
     <div className="date-range">
       <label>
-        FROM
+        {t("income.date_range.from")}
         <input
           className="pixel-input"
           type="date"
@@ -18,7 +20,7 @@ function DateRangePicker({ from, to, onChange }) {
         />
       </label>
       <label>
-        TO
+        {t("income.date_range.to")}
         <input
           className="pixel-input"
           type="date"
@@ -31,6 +33,7 @@ function DateRangePicker({ from, to, onChange }) {
 }
 
 export default function IncomePage() {
+  const { t } = useTranslation();
   const api = useApi();
   const today = new Date().toISOString().slice(0, 10);
 
@@ -93,7 +96,7 @@ export default function IncomePage() {
       setRecords(items);
       setSelectedIds([]);
     } catch (err) {
-      setError(err.message || "Unable to load income records");
+      setError(err.message || t("income.errors.load_records"));
     } finally {
       setLoading(false);
     }
@@ -344,11 +347,11 @@ export default function IncomePage() {
         <div className="panel">
           <div className="panel-header">
             <div>
-              <div className="panel-title">Income Log</div>
+              <div className="panel-title">{t("income.title")}</div>
               <div className="panel-meta">{records.length} transactions</div>
             </div>
             <div className="topbar-actions">
-              <button className="btn btn-ghost">Delete Selected</button>
+              <button className="btn btn-ghost">{t("common.delete")} Selected</button>
             </div>
           </div>
           <div className="table-wrapper">
@@ -356,11 +359,11 @@ export default function IncomePage() {
               <thead>
                 <tr>
                   <th><input type="checkbox" /></th>
-                  <th>Patient</th>
-                  <th>Doctor</th>
-                  <th>Amount</th>
-                  <th>Method</th>
-                  <th>Date</th>
+                  <th>{t("income.table.patient")}</th>
+                  <th>{t("income.table.doctor")}</th>
+                  <th>{t("income.table.amount")}</th>
+                  <th>{t("income.table.method")}</th>
+                  <th>{t("income.table.date")}</th>
                 </tr>
               </thead>
               <tbody>
@@ -374,7 +377,7 @@ export default function IncomePage() {
                     </td>
                     <td>
                       <span className={`pill ${record.payment_method === 'cash' ? 'pill-green' : 'pill-blue'}`}>
-                        {record.payment_method}
+                        {t(`income.form.${record.payment_method}`)}
                       </span>
                     </td>
                     <td className="mono">{record.service_date}</td>
@@ -386,23 +389,23 @@ export default function IncomePage() {
         </div>
 
         <div className="quick-form">
-          <div className="panel-title" style={{ marginBottom: '16px' }}>Quick Add</div>
+          <div className="panel-title" style={{ marginBottom: '16px' }}>{t("income.form.add_record")}</div>
           <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
             <div>
-              <div className="form-label">Patient</div>
+              <div className="form-label">{t("income.form.patient")}</div>
               <select className="form-input" value={form.patientId} onChange={(e) => setForm(p => ({...p, patientId: e.target.value}))}>
-                <option value="">+ New Patient</option>
+                <option value="">+ {t("income.form.new_patient")}</option>
                 {patients.map((p) => <option key={p.id} value={p.id}>{p.last_name}</option>)}
               </select>
             </div>
             {!form.patientId && (
               <div>
-                <div className="form-label">New Patient Name</div>
+                <div className="form-label">{t("income.form.new_patient")}</div>
                 <input className="form-input" placeholder="e.g. Smith" value={form.newPatientLastName} onChange={(e) => setForm(p => ({...p, newPatientLastName: e.target.value}))} />
               </div>
             )}
             <div>
-              <div className="form-label">Doctor</div>
+              <div className="form-label">{t("income.form.doctor")}</div>
               <select className="form-input" required value={form.doctorId} onChange={(e) => setForm(p => ({...p, doctorId: e.target.value}))}>
                 <option value="">Select doctor...</option>
                 {doctors.map((d) => <option key={d.id} value={d.id}>{d.last_name}</option>)}
@@ -410,22 +413,22 @@ export default function IncomePage() {
             </div>
             <div className="form-grid">
               <div>
-                <div className="form-label">Amount</div>
+                <div className="form-label">{t("income.form.amount")}</div>
                 <div className="amount-input-wrap">
                   <span className="amount-prefix">$</span>
                   <input className="form-input" type="number" placeholder="0.00" value={form.amount} onChange={(e) => setForm(p => ({...p, amount: e.target.value}))} />
                 </div>
               </div>
               <div>
-                <div className="form-label">Method</div>
+                <div className="form-label">{t("income.form.payment_method")}</div>
                 <div className="toggle-group">
-                  <div className={`toggle-opt ${form.paymentMethod === 'cash' ? 'on' : ''}`} onClick={() => setForm(p => ({...p, paymentMethod: 'cash'}))}>Cash</div>
-                  <div className={`toggle-opt ${form.paymentMethod === 'card' ? 'on' : ''}`} onClick={() => setForm(p => ({...p, paymentMethod: 'card'}))}>Card</div>
+                  <div className={`toggle-opt ${form.paymentMethod === 'cash' ? 'on' : ''}`} onClick={() => setForm(p => ({...p, paymentMethod: 'cash'}))}>{t("income.form.cash")}</div>
+                  <div className={`toggle-opt ${form.paymentMethod === 'card' ? 'on' : ''}`} onClick={() => setForm(p => ({...p, paymentMethod: 'card'}))}>{t("income.form.card")}</div>
                 </div>
               </div>
             </div>
             <button type="submit" className="btn btn-primary" style={{ marginTop: '8px' }} disabled={saving}>
-              {saving ? "Saving..." : "+ Add Payment"}
+              {saving ? t("common.loading") : `+ ${t("income.form.submit")}`}
             </button>
           </form>
         </div>

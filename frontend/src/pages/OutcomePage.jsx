@@ -1,7 +1,9 @@
 import { useEffect, useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { useApi } from "../api/client.js";
 
 export default function OutcomePage() {
+  const { t } = useTranslation();
   const api = useApi();
   const today = new Date().toISOString().slice(0, 10);
 
@@ -45,7 +47,7 @@ export default function OutcomePage() {
       setCategories(cats);
       setStaff(staffItems);
     } catch (err) {
-      setError(err.message || "Unable to load reference data");
+      setError(err.message || t("outcome.errors.load_reference"));
     }
   };
 
@@ -66,7 +68,7 @@ export default function OutcomePage() {
       setSelectedOutcomeIds([]);
       setSelectedSalaryIds([]);
     } catch (err) {
-      setError(err.message || "Unable to load outcome data");
+      setError(err.message || t("outcome.errors.load_data"));
     }
   };
 
@@ -231,11 +233,11 @@ export default function OutcomePage() {
         <div className="panel">
           <div className="panel-header">
             <div>
-              <div className="panel-title">Expense Log</div>
+              <div className="panel-title">{t("outcome.title")}</div>
               <div className="panel-meta">{records.length} transactions</div>
             </div>
             <div className="topbar-actions">
-              <button className="btn btn-ghost">Delete Selected</button>
+              <button className="btn btn-ghost">{t("common.delete")} Selected</button>
             </div>
           </div>
           <div className="table-wrapper">
@@ -243,10 +245,10 @@ export default function OutcomePage() {
               <thead>
                 <tr>
                   <th><input type="checkbox" /></th>
-                  <th>Category</th>
-                  <th>Vendor</th>
-                  <th>Amount</th>
-                  <th>Date</th>
+                  <th>{t("outcome.table.category")}</th>
+                  <th>{t("outcome.table.vendor")}</th>
+                  <th>{t("outcome.table.amount")}</th>
+                  <th>{t("outcome.table.date")}</th>
                 </tr>
               </thead>
               <tbody>
@@ -271,34 +273,34 @@ export default function OutcomePage() {
         </div>
 
         <div className="quick-form">
-          <div className="panel-title" style={{ marginBottom: '16px' }}>Quick Add</div>
+          <div className="panel-title" style={{ marginBottom: '16px' }}>{t("outcome.form.add_expense")}</div>
           <form onSubmit={handleExpenseSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
             <div>
-              <div className="form-label">Category</div>
+              <div className="form-label">{t("outcome.form.category")}</div>
               <select className="form-input" required value={expenseForm.categoryId} onChange={(e) => setExpenseForm(p => ({...p, categoryId: e.target.value}))}>
                 <option value="">Select category...</option>
                 {categories.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
               </select>
             </div>
             <div>
-              <div className="form-label">Vendor</div>
+              <div className="form-label">{t("outcome.form.vendor")}</div>
               <input className="form-input" placeholder="e.g. Dental Supplies Inc." value={expenseForm.vendor} onChange={(e) => setExpenseForm(p => ({...p, vendor: e.target.value}))} />
             </div>
             <div className="form-grid">
               <div>
-                <div className="form-label">Amount</div>
+                <div className="form-label">{t("outcome.form.amount")}</div>
                 <div className="amount-input-wrap">
                   <span className="amount-prefix">$</span>
                   <input className="form-input" type="number" placeholder="0.00" value={expenseForm.amount} onChange={(e) => setExpenseForm(p => ({...p, amount: e.target.value}))} />
                 </div>
               </div>
               <div>
-                <div className="form-label">Date</div>
+                <div className="form-label">{t("outcome.form.date")}</div>
                 <input className="form-input" type="date" value={expenseForm.expenseDate} onChange={(e) => setExpenseForm(p => ({...p, expenseDate: e.target.value}))} />
               </div>
             </div>
             <button type="submit" className="btn btn-primary" style={{ marginTop: '8px' }} disabled={savingExpense}>
-              {savingExpense ? "Saving..." : "+ Add Expense"}
+              {savingExpense ? t("common.loading") : `+ ${t("outcome.form.submit_expense")}`}
             </button>
           </form>
         </div>

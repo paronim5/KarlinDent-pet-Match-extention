@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { Line } from "react-chartjs-2";
+import { useTranslation } from "react-i18next";
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -14,6 +15,7 @@ import { useApi } from "../api/client.js";
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Tooltip, Legend);
 
 export default function ClinicPage() {
+  const { t } = useTranslation();
   const api = useApi();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -27,13 +29,13 @@ export default function ClinicPage() {
         const data = await api.get("/clinic/dashboard");
         setDashboard(data);
       } catch (err) {
-        setError(err.message || "Unable to load dashboard");
+        setError(err.message || t("clinic.errors.load_dashboard"));
       } finally {
         setLoading(false);
       }
     };
     load();
-  }, []);
+  }, [t]);
 
   const handleExportCsv = () => {
     window.open("/api/clinic/daily-pnl/export/csv", "_blank", "noopener");
@@ -51,7 +53,7 @@ export default function ClinicPage() {
         labels,
         datasets: [
           {
-            label: "INCOME",
+            label: t("clinic.chart.income"),
             borderColor: "#2ecc40",
             backgroundColor: "rgba(46, 204, 64, 0.1)",
             borderWidth: 4,
@@ -60,7 +62,7 @@ export default function ClinicPage() {
             data: dashboard.daily_pnl.map((item) => item.total_income)
           },
           {
-            label: "OUTCOME",
+            label: t("clinic.chart.outcome"),
             borderColor: "#e03030",
             backgroundColor: "rgba(224, 48, 48, 0.1)",
             borderWidth: 4,
@@ -69,7 +71,7 @@ export default function ClinicPage() {
             data: dashboard.daily_pnl.map((item) => item.total_outcome)
           },
           {
-            label: "PROFIT",
+            label: t("clinic.chart.profit"),
             borderColor: "#ffd700",
             backgroundColor: "rgba(255, 215, 0, 0.1)",
             borderWidth: 4,
@@ -104,14 +106,14 @@ export default function ClinicPage() {
 
   return (
     <>
-      {loading && <div>Loading...</div>}
+      {loading && <div>{t("common.loading")}</div>}
       {error && <div className="form-error">{error}</div>}
       {dashboard && (
         <>
           <div className="stat-strip">
             <div className="stat-card s-orange">
               <div className="stat-icon">↗</div>
-              <div className="stat-label">Total Income</div>
+              <div className="stat-label">{t("clinic.total_income")}</div>
               <div className="stat-value">
                 {dashboard.lease_cost.toLocaleString(undefined, {
                   style: "currency",
@@ -121,7 +123,7 @@ export default function ClinicPage() {
             </div>
             <div className="stat-card s-red">
               <div className="stat-icon">↙</div>
-              <div className="stat-label">Payroll Due</div>
+              <div className="stat-label">{t("clinic.payroll_due")}</div>
               <div className="stat-value">
                 {dashboard.avg_payment_per_patient.toLocaleString(undefined, {
                   style: "currency",
@@ -131,7 +133,7 @@ export default function ClinicPage() {
             </div>
             <div className="stat-card s-green">
               <div className="stat-icon">◈</div>
-              <div className="stat-label">Net Profit</div>
+              <div className="stat-label">{t("clinic.net_profit")}</div>
               <div className="stat-value">
                 {Object.values(dashboard.avg_salary_by_role).reduce((a, b) => a + b, 0).toLocaleString(undefined, {
                   style: "currency",
@@ -141,7 +143,7 @@ export default function ClinicPage() {
             </div>
             <div className="stat-card s-blue">
               <div className="stat-icon">◉</div>
-              <div className="stat-label">Active Staff</div>
+              <div className="stat-label">{t("clinic.active_staff")}</div>
               <div className="stat-value">{Object.keys(dashboard.avg_salary_by_role).length}</div>
             </div>
           </div>
@@ -149,12 +151,12 @@ export default function ClinicPage() {
           <div className="panel">
             <div className="panel-header">
               <div>
-                <div className="panel-title">Daily P&L</div>
-                <div className="panel-meta">Last 30 days</div>
+                <div className="panel-title">{t("clinic.daily_pnl")}</div>
+                <div className="panel-meta">{t("clinic.last_30_days")}</div>
               </div>
               <div className="topbar-actions">
-                <button className="btn btn-ghost" onClick={handleExportCsv}>⇣ Export CSV</button>
-                <button className="btn btn-ghost" onClick={handleExportPdf}>⇣ Export PDF</button>
+                <button className="btn btn-ghost" onClick={handleExportCsv}>⇣ {t("common.export_csv")}</button>
+                <button className="btn btn-ghost" onClick={handleExportPdf}>⇣ {t("common.export_pdf")}</button>
               </div>
             </div>
             <div className="chart-area">
