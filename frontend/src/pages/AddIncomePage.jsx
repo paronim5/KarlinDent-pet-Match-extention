@@ -110,40 +110,47 @@ export default function AddIncomePage() {
       return;
     }
     const q = form.patientInput;
+    // Debounce is 300ms
     const handle = setTimeout(async () => {
+      if (!q.trim()) {
+        setPatientSuggestions([]);
+        setSearching(false);
+        return;
+      }
       setSearching(true);
       try {
         const results = await api.get(`/patients/search?q=${encodeURIComponent(q)}`);
         setPatientSuggestions(results || []);
+        
         if (results && results.length > 0) {
           const top = results[0];
-          if (top && (top.exact || top.last_name.toLowerCase() === q.trim().split(" ")[0].toLowerCase())) {
-            const fullName = [top.first_name, top.last_name].filter(Boolean).join(" ");
-            const totalStr = (top.banner?.total_paid ?? 0).toLocaleString(undefined, { minimumFractionDigits: 2 });
-            const bannerText = top.banner?.last_treatment_doctor
-              ? t("income.banner.found_with_last", { name: fullName, total: totalStr, doctor: top.banner.last_treatment_doctor, date: top.banner.last_treatment_date })
-              : t("income.banner.found_basic", { name: fullName, total: totalStr });
-            setForm((p) => ({
-              ...p,
-              banner: {
-                found: true,
-                text: bannerText,
-              },
-              lockedPatient: { id: top.id, first_name: top.first_name, last_name: top.last_name }
-            }));
+          // Check if it's an exact match to possibly show the banner
+          const fullName = [top.first_name, top.last_name].filter(Boolean).join(" ");
+          const revName = [top.last_name, top.first_name].filter(Boolean).join(" ");
+          const qLower = q.trim().toLowerCase();
+          
+          if (top.exact || fullName.toLowerCase() === qLower || revName.toLowerCase() === qLower) {
+             const totalStr = (top.banner?.total_paid ?? 0).toLocaleString(undefined, { minimumFractionDigits: 2 });
+             const bannerText = top.banner?.last_treatment_doctor
+               ? t("income.banner.found_with_last", { name: fullName, total: totalStr, doctor: top.banner.last_treatment_doctor, date: top.banner.last_treatment_date })
+               : t("income.banner.found_basic", { name: fullName, total: totalStr });
+             
+             setForm((p) => ({
+               ...p,
+               banner: {
+                 found: true,
+                 text: bannerText,
+               }
+             }));
           } else {
-            setForm((p) => ({
-              ...p,
-              banner: { found: false, text: t("income.banner.new_patient") },
-              lockedPatient: null,
-            }));
+             // If partial match, clear banner to focus on dropdown
+             setForm((p) => ({ ...p, banner: null }));
           }
         } else {
-          setForm((p) => ({ ...p, banner: { found: false, text: t("income.banner.new_patient") }, lockedPatient: null }));
-          setPatientSuggestions([]);
+           setForm((p) => ({ ...p, banner: { found: false, text: t("income.banner.new_patient") } }));
         }
       } catch {
-        setForm((p) => ({ ...p, banner: null, lockedPatient: null }));
+        setForm((p) => ({ ...p, banner: null }));
         setPatientSuggestions([]);
       } finally {
         setSearching(false);
@@ -193,9 +200,22 @@ export default function AddIncomePage() {
   const isFormValid = isPatientValid && isAmountValid && isDoctorValid && isLabCostValid && isLabNoteValid && isReceiptNoteValid;
 
   const onPatientKeyDown = (e) => {
-    if ((e.key === "Enter" || e.key === "Tab") && form.banner && form.banner.found && form.lockedPatient) {
+    if ((e.key === "Enter" || e.key === "Tab") && patientSuggestions.length > 0) {
       e.preventDefault();
-      setForm((p) => ({ ...p, patientLocked: true }));
+      // Auto-select the first suggestion on Enter/Tab
+      const p = patientSuggestions[0];
+      const name = [p.last_name, p.first_name].filter(Boolean).join(" ");
+      setForm((prev) => ({
+        ...prev,
+        patientInput: name,
+        patientLocked: true,
+        lockedPatient: { id: p.id, first_name: p.first_name, last_name: p.last_name },
+        banner: { 
+          found: true, 
+          text: t("income.banner.found_basic", { name: name, total: (p.banner?.total_paid ?? 0).toLocaleString(undefined, { minimumFractionDigits: 2 }) }) 
+        }
+      }));
+      setPatientSuggestions([]);
     }
   };
 
@@ -305,7 +325,7 @@ export default function AddIncomePage() {
       {error && <div role="alert" className="form-error" style={{ marginBottom: '16px' }}>{error}</div>}
       <form onSubmit={handleSubmit} aria-busy={saving || searching}>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px' }}>
-          <div>
+          <div style={{ position: 'relative' }}>
             <div className="form-label">{t("income.form.patient_compact_label")}</div>
             <input
               className="form-input"
@@ -317,10 +337,39 @@ export default function AddIncomePage() {
               onKeyDown={onPatientKeyDown}
               onBlur={onPatientBlur}
               disabled={form.patientLocked || saving}
+              autoComplete="off"
             />
-            {!form.patientLocked && patientSuggestions.length > 0 && (
-              <div className="dropdown" role="listbox" style={{ marginTop: '6px', background: 'var(--surface)', borderRadius: '6px', border: '1px solid var(--border)', maxHeight: '180px', overflowY: 'auto' }}>
-                {patientSuggestions.map((p) => (
+            {searching && (
+              <div style={{ position: 'absolute', right: '10px', top: '38px', color: 'var(--text-secondary)' }}>
+                <span style={{ fontSize: '12px' }}>...</span>
+              </div>
+            )}
+            {!form.patientLocked && (searching || patientSuggestions.length > 0 || (form.patientInput && form.patientInput.trim().length > 0)) && (
+              <div className="dropdown" role="listbox" style={{ 
+                  position: 'absolute', 
+                  zIndex: 100, 
+                  width: '100%',
+                  marginTop: '4px', 
+                  background: 'var(--surface)', 
+                  borderRadius: '6px', 
+                  border: '1px solid var(--border)', 
+                  boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+                  maxHeight: '220px', 
+                  overflowY: 'auto' 
+              }}>
+                {searching && (
+                  <div style={{ padding: '12px', color: 'var(--text-secondary)', textAlign: 'center', fontSize: '0.9em' }}>
+                    Loading...
+                  </div>
+                )}
+                
+                {!searching && patientSuggestions.length === 0 && form.patientInput.trim().length > 0 && (
+                   <div style={{ padding: '12px', color: 'var(--text-secondary)', textAlign: 'center', fontStyle: 'italic', fontSize: '0.9em' }}>
+                     No results found
+                   </div>
+                )}
+
+                {!searching && patientSuggestions.map((p) => (
                   <div
                     key={p.id}
                     role="option"
@@ -328,18 +377,34 @@ export default function AddIncomePage() {
                     onMouseDown={(e) => {
                       e.preventDefault();
                       const name = [p.last_name, p.first_name].filter(Boolean).join(" ");
+                      // Update form with selected patient
                       setForm((prev) => ({
                         ...prev,
                         patientInput: name,
                         patientLocked: true,
                         lockedPatient: { id: p.id, first_name: p.first_name, last_name: p.last_name },
-                        banner: { found: true, text: name }
+                        banner: { 
+                          found: true, 
+                          text: t("income.banner.found_basic", { name: name, total: (p.banner?.total_paid ?? 0).toLocaleString(undefined, { minimumFractionDigits: 2 }) }) 
+                        }
                       }));
                       setPatientSuggestions([]);
                     }}
-                    style={{ padding: '8px 10px', cursor: 'pointer' }}
+                    style={{ 
+                      padding: '10px 12px', 
+                      cursor: 'pointer', 
+                      borderBottom: '1px solid var(--border-light)',
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'center'
+                    }}
+                    onMouseEnter={(e) => e.currentTarget.style.background = 'var(--bg-hover)'}
+                    onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
                   >
-                    {[p.last_name, p.first_name].filter(Boolean).join(" ")}
+                    <div>
+                      <div style={{ fontWeight: '500' }}>{[p.last_name, p.first_name].filter(Boolean).join(" ")}</div>
+                    </div>
+                    {p.exact && <span style={{ fontSize: '0.75em', background: 'var(--green)', color: '#fff', padding: '2px 6px', borderRadius: '4px' }}>Match</span>}
                   </div>
                 ))}
               </div>
