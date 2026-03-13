@@ -209,7 +209,8 @@ def list_income_records():
                        p.last_name,
                        s.first_name,
                        s.last_name,
-                       {"ir.salary_payment_id" if has_salary_link else "NULL AS salary_payment_id"}
+                       {"ir.salary_payment_id" if has_salary_link else "NULL AS salary_payment_id"},
+                       ir.created_at
                 FROM income_records ir
                 JOIN patients p ON p.id = ir.patient_id
                 JOIN staff s ON s.id = ir.doctor_id
@@ -230,7 +231,8 @@ def list_income_records():
                        p.last_name,
                        s.first_name,
                        s.last_name,
-                       {"ir.salary_payment_id" if has_salary_link else "NULL AS salary_payment_id"}
+                       {"ir.salary_payment_id" if has_salary_link else "NULL AS salary_payment_id"},
+                       ir.created_at
                 FROM income_records ir
                 JOIN patients p ON p.id = ir.patient_id
                 JOIN staff s ON s.id = ir.doctor_id
@@ -254,6 +256,7 @@ def list_income_records():
             doctor_first_name = row[8]
             doctor_last_name = row[9]
             salary_payment_id = row[10]
+            created_at = row[11]
         else:
             lab_cost = 0.0
             payment_method = row[3]
@@ -263,6 +266,7 @@ def list_income_records():
             doctor_first_name = row[7]
             doctor_last_name = row[8]
             salary_payment_id = row[9]
+            created_at = row[10]
         items.append(
             {
                 "id": row[0],
@@ -280,7 +284,8 @@ def list_income_records():
                     "last_name": doctor_last_name,
                 },
                 "salary_payment_id": salary_payment_id,
-                "is_paid": salary_payment_id is not None
+                "is_paid": salary_payment_id is not None,
+                "created_at": created_at.isoformat() if created_at else None
             }
         )
 

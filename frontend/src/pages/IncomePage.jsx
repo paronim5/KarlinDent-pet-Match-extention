@@ -128,12 +128,31 @@ export default function IncomePage() {
 
   const chartData = useMemo(() => {
     if (!records || records.length === 0) return null;
+    
+    const isDayView = range.from === range.to;
     const groups = {};
-    records.forEach((r) => {
-      const d = r.service_date;
-      if (!groups[d]) groups[d] = 0;
-      groups[d] += r.amount || 0;
-    });
+
+    if (isDayView) {
+      // Initialize all 24 hours
+      for (let i = 0; i < 24; i++) {
+        groups[`${String(i).padStart(2, '0')}:00`] = 0;
+      }
+      
+      records.forEach((r) => {
+        if (r.created_at) {
+          const hour = new Date(r.created_at).getHours();
+          const label = `${String(hour).padStart(2, '0')}:00`;
+          groups[label] += r.amount || 0;
+        }
+      });
+    } else {
+      records.forEach((r) => {
+        const d = r.service_date;
+        if (!groups[d]) groups[d] = 0;
+        groups[d] += r.amount || 0;
+      });
+    }
+
     const labels = Object.keys(groups).sort();
     const data = labels.map((l) => groups[l]);
     return {
@@ -152,7 +171,7 @@ export default function IncomePage() {
         },
       ],
     };
-  }, [records, t]);
+  }, [records, t, range]);
 
   const chartOptions = {
     responsive: true,

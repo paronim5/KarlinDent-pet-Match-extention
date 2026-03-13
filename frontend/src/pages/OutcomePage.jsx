@@ -215,15 +215,32 @@ export default function OutcomePage() {
 
   const chartData = useMemo(() => {
     if (!records || records.length === 0) return null;
-    // Group by date
-    const groups = {};
-    records.forEach(r => {
-        const d = r.date || r.expense_date;
-        if (!groups[d]) groups[d] = 0;
-        groups[d] += r.amount;
-    });
     
-    // Sort dates
+    const isDayView = from === to;
+    const groups = {};
+
+    if (isDayView) {
+      // Initialize all 24 hours
+      for (let i = 0; i < 24; i++) {
+        groups[`${String(i).padStart(2, '0')}:00`] = 0;
+      }
+      
+      records.forEach((r) => {
+        if (r.created_at) {
+          const hour = new Date(r.created_at).getHours();
+          const label = `${String(hour).padStart(2, '0')}:00`;
+          groups[label] += r.amount || 0;
+        }
+      });
+    } else {
+      records.forEach(r => {
+          const d = r.date || r.expense_date;
+          if (!groups[d]) groups[d] = 0;
+          groups[d] += r.amount;
+      });
+    }
+    
+    // Sort labels
     const labels = Object.keys(groups).sort();
     const data = labels.map(l => groups[l]);
 
@@ -243,7 +260,7 @@ export default function OutcomePage() {
             }
         ]
     };
-  }, [records, t]);
+  }, [records, t, from, to]);
 
   const chartOptions = {
     responsive: true,
