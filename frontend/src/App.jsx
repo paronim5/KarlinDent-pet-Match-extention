@@ -10,6 +10,8 @@ import DoctorPage from "./pages/DoctorPage.jsx";
 import StaffRolePage from "./pages/StaffRolePage.jsx";
 import StaffIncomeDashboard from "./pages/StaffIncomeDashboard.jsx";
 import DayDashboardPage from "./pages/DayDashboardPage.jsx";
+import SchedulePage from "./pages/SchedulePage.jsx";
+import SalaryReportPage from "./pages/SalaryReportPage.jsx";
 import Layout from "./components/Layout.jsx";
 
 const AuthContext = createContext(null);
@@ -26,6 +28,14 @@ function useAuth() {
 
 function AuthProvider({ children }) {
   const value = useAuth();
+  useEffect(() => {
+    if (value?.user) {
+      localStorage.setItem("auth_user", JSON.stringify(value.user));
+    }
+    if (value?.token) {
+      localStorage.setItem("auth_token", value.token);
+    }
+  }, [value?.user, value?.token]);
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
 
@@ -48,9 +58,11 @@ function AppRoutes() {
         <Route path="/income/edit/:id" element={<AddIncomePage />} />
         <Route path="/outcome" element={<OutcomePage />} />
         <Route path="/outcome/add" element={<AddOutcomePage />} />
+        <Route path="/outcome/salary-report" element={<SalaryReportPage />} />
         <Route path="/staff" element={<StaffPage />} />
         <Route path="/staff/doctor/:id" element={<DoctorPage />} />
         <Route path="/staff/role/:id" element={<StaffRolePage />} />
+        <Route path="/schedule" element={<SchedulePage />} />
         <Route path="/my-income" element={<StaffIncomeDashboard />} />
         <Route path="/clinic/day/:date" element={<DayDashboardPage />} />
         <Route path="*" element={<Navigate to="/clinic" replace />} />

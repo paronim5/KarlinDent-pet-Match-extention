@@ -14,6 +14,10 @@ export default function StaffRolePage() {
   const [staff, setStaff] = useState(null);
   const [saving, setSaving] = useState(false);
   const [payingSalary, setPayingSalary] = useState(false);
+  const [documents, setDocuments] = useState([]);
+  const [documentsLoading, setDocumentsLoading] = useState(false);
+  const [documentsError, setDocumentsError] = useState("");
+  const [documentFilter, setDocumentFilter] = useState({ from: today.slice(0, 7) + "-01", to: today });
   const [form, setForm] = useState({
     workDate: today,
     startTime: "09:00",
@@ -42,9 +46,89 @@ export default function StaffRolePage() {
     }
   };
 
+  const loadDocuments = async (rangeFrom, rangeTo) => {
+    setDocumentsLoading(true);
+    setDocumentsError("");
+    try {
+      const params = new URLSearchParams();
+      params.set("type", "salary_report");
+      if (rangeFrom) params.set("from", rangeFrom);
+      if (rangeTo) params.set("to", rangeTo);
+      const items = await api.get(`/staff/${id}/documents?${params.toString()}`);
+      setDocuments(items);
+    } catch (err) {
+      setDocumentsError(err.message || "Unable to load salary documents");
+    } finally {
+      setDocumentsLoading(false);
+    }
+  };
+
+  const getAuthHeaders = () => {
+    const headers = {};
+    const rawUser = localStorage.getItem("auth_user");
+    if (!rawUser) return headers;
+    try {
+      const user = JSON.parse(rawUser);
+      if (user?.id) headers["X-Staff-Id"] = String(user.id);
+      if (user?.role) headers["X-Staff-Role"] = String(user.role);
+    } catch {
+    }
+    return headers;
+  };
+
+  const downloadDocument = async (documentId, fallbackName) => {
+    try {
+      const headers = getAuthHeaders();
+      const response = await fetch(`/api/staff/${id}/documents/${documentId}/download`, { headers });
+      if (!response.ok) {
+        throw new Error("Unable to download document");
+      }
+      const blob = await response.blob();
+      const fileName = fallbackName || "salary-report.pdf";
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = fileName;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+    } catch (err) {
+      setDocumentsError(err.message || "Unable to download document");
+    }
+  };
+
+  const previewDocument = async (documentId) => {
+    try {
+      const headers = getAuthHeaders();
+      const response = await fetch(`/api/staff/${id}/documents/${documentId}/view`, { headers });
+      if (!response.ok) {
+        throw new Error("Unable to open document preview");
+      }
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      window.open(url, "_blank", "noopener,noreferrer");
+      setTimeout(() => {
+        window.URL.revokeObjectURL(url);
+      }, 60000);
+    } catch (err) {
+      setDocumentsError(err.message || "Unable to open document preview");
+    }
+  };
+
   useEffect(() => {
     loadAll();
   }, [id]);
+
+  useEffect(() => {
+    setDocumentFilter({ from, to });
+  }, [from, to]);
+
+  useEffect(() => {
+    if (documentFilter.from || documentFilter.to) {
+      loadDocuments(documentFilter.from, documentFilter.to);
+    }
+  }, [id, documentFilter.from, documentFilter.to]);
 
   const totalHours = useMemo(
     () => timesheets.reduce((sum, t) => sum + t.hours, 0),
@@ -236,6 +320,86 @@ export default function StaffRolePage() {
                   {payingSalary ? "Recording..." : "Record Salary"}
                 </button>
               </div>
+            </div>
+          </div>
+          <div className="panel" style={{ marginBottom: "16px" }}>
+            <div className="panel-header" style={{ justifyContent: "space-between", alignItems: "center" }}>
+              <div>
+                <div className="panel-title">Salary Documents</div>
+                <div className="panel-meta">Signed reports</div>
+              </div>
+              <div className="doc-filter-controls">
+                <input
+                  type="date"
+                  value={documentFilter.from}
+                  onChange={(e) => setDocumentFilter((prev) => ({ ...prev, from: e.target.value }))}
+                  className="form-input doc-filter-input"
+                />
+                <span className="doc-filter-separator">-</span>
+                <input
+                  type="date"
+                  value={documentFilter.to}
+                  onChange={(e) => setDocumentFilter((prev) => ({ ...prev, to: e.target.value }))}
+                  className="form-input doc-filter-input"
+                />
+                <button className="btn btn-ghost" onClick={() => loadDocuments(documentFilter.from, documentFilter.to)}>
+                  Search
+                </button>
+              </div>
+            </div>
+            <div className="table-wrapper">
+              <table className="data-table">
+                <thead>
+                  <tr>
+                    <th>Period</th>
+                    <th>Signed At</th>
+                    <th>Signer</th>
+                    <th>File</th>
+                    <th>Action</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {documentsLoading && (
+                    [...Array(3)].map((_, idx) => (
+                      <tr key={`doc-${idx}`}>
+                        <td><div className="skeleton-line" /></td>
+                        <td><div className="skeleton-line" /></td>
+                        <td><div className="skeleton-line" /></td>
+                        <td><div className="skeleton-line" /></td>
+                        <td><div className="skeleton-line" /></td>
+                      </tr>
+                    ))
+                  )}
+                  {!documentsLoading && documentsError && (
+                    <tr>
+                      <td colSpan={5} className="empty-state">{documentsError}</td>
+                    </tr>
+                  )}
+                  {!documentsLoading && !documentsError && documents.length === 0 && (
+                    <tr>
+                      <td colSpan={5} className="empty-state">No salary documents found</td>
+                    </tr>
+                  )}
+                  {!documentsLoading && !documentsError && documents.map((doc) => (
+                    <tr key={doc.id}>
+                      <td className="mono">{doc.period_from || "—"} → {doc.period_to || "—"}</td>
+                      <td className="mono">{doc.signed_at ? new Date(doc.signed_at).toLocaleString() : "—"}</td>
+                      <td>{doc.signer_name || "—"}</td>
+                      <td className="mono doc-filename">{doc.file_name || "salary-report.pdf"}</td>
+                      <td>
+                        <div className="doc-actions">
+                          <button className="pay-btn" onClick={() => previewDocument(doc.id)}>
+                            View
+                          </button>
+                          <button className="pay-btn" onClick={() => downloadDocument(doc.id, doc.file_name)}>
+                            Download
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
           </div>
           <div className="panel-title" style={{ marginBottom: '16px' }}>{editingId ? 'Edit Shift' : 'Add Shift'}</div>

@@ -3,6 +3,19 @@ const API_BASE = "/api";
 export async function apiRequest(path, options = {}) {
   const headers = new Headers(options.headers || {});
   headers.set("Content-Type", "application/json");
+  try {
+    const rawUser = localStorage.getItem("auth_user");
+    if (rawUser) {
+      const user = JSON.parse(rawUser);
+      if (user && user.id) {
+        headers.set("X-Staff-Id", String(user.id));
+      }
+      if (user && user.role) {
+        headers.set("X-Staff-Role", String(user.role));
+      }
+    }
+  } catch {
+  }
 
   const response = await fetch(`${API_BASE}${path}`, {
     ...options,

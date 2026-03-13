@@ -1,8 +1,10 @@
 from datetime import date, datetime
+import csv
+import io
 from typing import Any, Dict, List, Optional
 
 import psycopg2
-from flask import Blueprint, jsonify, request
+from flask import Blueprint, jsonify, request, send_file
 
 from .config import config
 from .db import get_connection, release_connection
@@ -1279,3 +1281,401 @@ def doctor_monthly_summary(doctor_id: int):
     ]
 
     return jsonify(items)
+
+
+@income_bp.route("/doctor/<int:doctor_id>/commissions", methods=["GET"])
+def doctor_commissions(doctor_id: int):
+    today = date.today()
+    start_param = request.args.get("from")
+    end_param = request.args.get("to")
+    try:
+        start = parse_date(start_param) if start_param else today.replace(day=max(1, today.day - 29))
+        end = parse_date(end_param) if end_param else today
+    except ValueError:
+        return jsonify({"error": "invalid_date_format"}), 400
+    if start > end:
+        return jsonify({"error": "invalid_date_range"}), 400
+
+    conn = get_connection()
+    try:
+        cur = conn.cursor()
+        cur.execute(
+            """
+            SELECT s.id, s.first_name, s.last_name
+            FROM staff s
+            JOIN staff_roles r ON r.id = s.role_id
+            WHERE s.id = %s AND r.name = 'doctor' AND s.is_active = TRUE
+            """,
+            (doctor_id,),
+        )
+        doctor_row = cur.fetchone()
+        if not doctor_row:
+            return jsonify({"error": "invalid_doctor"}), 400
+
+        includes_service_time = column_exists(conn, "income_records", "service_time")
+        time_expr = "ir.service_time" if includes_service_time else "ir.created_at::time"
+        try:
+            cur.execute(
+                f"""
+                SELECT ir.id,
+                       ir.service_date,
+                       {time_expr} AS service_time,
+                       ir.amount,
+                       ir.note,
+                       p.id,
+                       p.first_name,
+                       p.last_name,
+                       s.first_name,
+                       s.last_name,
+                       (ir.amount * s.commission_rate) AS commission
+                FROM income_records ir
+                JOIN patients p ON p.id = ir.patient_id
+                JOIN staff s ON s.id = ir.doctor_id
+                JOIN staff_roles r ON r.id = s.role_id
+                WHERE s.id = %s
+                  AND r.name = 'doctor'
+                  AND s.is_active = TRUE
+                  AND ir.service_date BETWEEN %s AND %s
+                ORDER BY ir.service_date DESC, ir.id DESC
+                """,
+                (doctor_id, start, end),
+            )
+            rows = cur.fetchall()
+        except psycopg2.errors.UndefinedColumn:
+            conn.rollback()
+            cur = conn.cursor()
+            cur.execute(
+                f"""
+                SELECT ir.id,
+                       ir.service_date,
+                       {time_expr} AS service_time,
+                       ir.amount,
+                       ir.note,
+                       p.id,
+                       p.first_name,
+                       p.last_name,
+                       s.first_name,
+                       s.last_name,
+                       (ir.amount * %s) AS commission
+                FROM income_records ir
+                JOIN patients p ON p.id = ir.patient_id
+                JOIN staff s ON s.id = ir.doctor_id
+                JOIN staff_roles r ON r.id = s.role_id
+                WHERE s.id = %s
+                  AND r.name = 'doctor'
+                  AND s.is_active = TRUE
+                  AND ir.service_date BETWEEN %s AND %s
+                ORDER BY ir.service_date DESC, ir.id DESC
+                """,
+                (config.DOCTOR_COMMISSION_RATE, doctor_id, start, end),
+            )
+            rows = cur.fetchall()
+    finally:
+        release_connection(conn)
+
+    patient_map: Dict[int, Dict[str, Any]] = {}
+    total_income = 0.0
+    total_commission = 0.0
+    for row in rows:
+        record_id, service_date, service_time, amount, note, patient_id, p_first, p_last, d_first, d_last, commission = row
+        patient = patient_map.get(patient_id)
+        if not patient:
+            patient = {
+                "id": int(patient_id),
+                "name": " ".join(filter(None, [p_first, p_last])).strip(),
+                "total_income": 0.0,
+                "total_commission": 0.0,
+                "treatments": [],
+            }
+            patient_map[patient_id] = patient
+        amount_value = float(amount or 0)
+        commission_value = float(commission or 0)
+        patient["total_income"] += amount_value
+        patient["total_commission"] += commission_value
+        patient["treatments"].append(
+            {
+                "id": int(record_id),
+                "service_date": service_date.isoformat(),
+                "service_time": service_time.strftime("%H:%M") if service_time else None,
+                "amount": round(amount_value, 2),
+                "commission": round(commission_value, 2),
+                "note": note,
+            }
+        )
+        total_income += amount_value
+        total_commission += commission_value
+
+    patients = list(patient_map.values())
+    for patient in patients:
+        patient["total_income"] = round(patient["total_income"], 2)
+        patient["total_commission"] = round(patient["total_commission"], 2)
+
+    return jsonify(
+        {
+            "doctor": {
+                "id": int(doctor_row[0]),
+                "first_name": doctor_row[1],
+                "last_name": doctor_row[2],
+            },
+            "from": start.isoformat(),
+            "to": end.isoformat(),
+            "patients": patients,
+            "totals": {
+                "patient_count": len(patients),
+                "treatment_count": sum(len(p["treatments"]) for p in patients),
+                "total_income": round(total_income, 2),
+                "total_commission": round(total_commission, 2),
+            },
+        }
+    )
+
+
+@income_bp.route("/doctor/<int:doctor_id>/commissions/export", methods=["GET"])
+def export_doctor_commissions(doctor_id: int):
+    today = date.today()
+    start_param = request.args.get("from")
+    end_param = request.args.get("to")
+    try:
+        start = parse_date(start_param) if start_param else today.replace(day=max(1, today.day - 29))
+        end = parse_date(end_param) if end_param else today
+    except ValueError:
+        return jsonify({"error": "invalid_date_format"}), 400
+    if start > end:
+        return jsonify({"error": "invalid_date_range"}), 400
+
+    conn = get_connection()
+    try:
+        cur = conn.cursor()
+        cur.execute(
+            """
+            SELECT s.id, s.first_name, s.last_name
+            FROM staff s
+            JOIN staff_roles r ON r.id = s.role_id
+            WHERE s.id = %s AND r.name = 'doctor' AND s.is_active = TRUE
+            """,
+            (doctor_id,),
+        )
+        doctor_row = cur.fetchone()
+        if not doctor_row:
+            return jsonify({"error": "invalid_doctor"}), 400
+
+        includes_service_time = column_exists(conn, "income_records", "service_time")
+        time_expr = "ir.service_time" if includes_service_time else "ir.created_at::time"
+        try:
+            cur.execute(
+                f"""
+                SELECT ir.service_date,
+                       {time_expr} AS service_time,
+                       p.first_name,
+                       p.last_name,
+                       ir.amount,
+                       (ir.amount * s.commission_rate) AS commission,
+                       ir.note
+                FROM income_records ir
+                JOIN patients p ON p.id = ir.patient_id
+                JOIN staff s ON s.id = ir.doctor_id
+                JOIN staff_roles r ON r.id = s.role_id
+                WHERE s.id = %s
+                  AND r.name = 'doctor'
+                  AND s.is_active = TRUE
+                  AND ir.service_date BETWEEN %s AND %s
+                ORDER BY ir.service_date DESC, ir.id DESC
+                """,
+                (doctor_id, start, end),
+            )
+            rows = cur.fetchall()
+        except psycopg2.errors.UndefinedColumn:
+            conn.rollback()
+            cur = conn.cursor()
+            cur.execute(
+                f"""
+                SELECT ir.service_date,
+                       {time_expr} AS service_time,
+                       p.first_name,
+                       p.last_name,
+                       ir.amount,
+                       (ir.amount * %s) AS commission,
+                       ir.note
+                FROM income_records ir
+                JOIN patients p ON p.id = ir.patient_id
+                JOIN staff s ON s.id = ir.doctor_id
+                JOIN staff_roles r ON r.id = s.role_id
+                WHERE s.id = %s
+                  AND r.name = 'doctor'
+                  AND s.is_active = TRUE
+                  AND ir.service_date BETWEEN %s AND %s
+                ORDER BY ir.service_date DESC, ir.id DESC
+                """,
+                (config.DOCTOR_COMMISSION_RATE, doctor_id, start, end),
+            )
+            rows = cur.fetchall()
+    finally:
+        release_connection(conn)
+
+    output = io.StringIO()
+    writer = csv.writer(output)
+    writer.writerow(["Patient", "Date", "Time", "Amount", "Commission", "Treatment Details"])
+    for row in rows:
+        service_date, service_time, p_first, p_last, amount, commission, note = row
+        patient_name = " ".join(filter(None, [p_first, p_last])).strip()
+        time_value = service_time.strftime("%H:%M") if service_time else ""
+        writer.writerow(
+            [
+                patient_name,
+                service_date.isoformat(),
+                time_value,
+                round(float(amount or 0), 2),
+                round(float(commission or 0), 2),
+                note or "",
+            ]
+        )
+
+    output.seek(0)
+    buffer = io.BytesIO(output.getvalue().encode("utf-8"))
+    buffer.seek(0)
+    filename = f"doctor_{doctor_id}_commissions_{start.isoformat()}_{end.isoformat()}.csv"
+    return send_file(
+        buffer,
+        as_attachment=True,
+        download_name=filename,
+        mimetype="text/csv",
+    )
+
+
+@income_bp.route("/doctor/<int:doctor_id>/summary/hourly", methods=["GET"])
+def doctor_hourly_summary(doctor_id: int):
+    date_param = request.args.get("date")
+    if not date_param:
+        return jsonify({"error": "date_required"}), 400
+    try:
+        target = parse_date(date_param)
+    except ValueError:
+        return jsonify({"error": "invalid_date_format"}), 400
+
+    conn = get_connection()
+    try:
+        cur = conn.cursor()
+        cur.execute(
+            """
+            SELECT s.id
+            FROM staff s
+            JOIN staff_roles r ON r.id = s.role_id
+            WHERE s.id = %s AND r.name = 'doctor' AND s.is_active = TRUE
+            """,
+            (doctor_id,),
+        )
+        row = cur.fetchone()
+        if not row:
+            return jsonify({"error": "invalid_doctor"}), 400
+
+        includes_service_time = column_exists(conn, "income_records", "service_time")
+        time_expr = "ir.service_time" if includes_service_time else "ir.created_at::time"
+        try:
+            cur.execute(
+                f"""
+                SELECT EXTRACT(HOUR FROM (ir.service_date::timestamp + {time_expr}))::INT AS hour,
+                       SUM(ir.amount * s.commission_rate) AS total_commission,
+                       COUNT(DISTINCT ir.patient_id) AS patient_count
+                FROM income_records ir
+                JOIN staff s ON s.id = ir.doctor_id
+                JOIN staff_roles r ON r.id = s.role_id
+                WHERE ir.doctor_id = %s
+                  AND r.name = 'doctor'
+                  AND s.is_active = TRUE
+                  AND ir.service_date = %s
+                GROUP BY hour
+                ORDER BY hour
+                """,
+                (doctor_id, target),
+            )
+            rows = cur.fetchall()
+        except psycopg2.errors.UndefinedColumn:
+            conn.rollback()
+            cur = conn.cursor()
+            cur.execute(
+                f"""
+                SELECT EXTRACT(HOUR FROM (ir.service_date::timestamp + {time_expr}))::INT AS hour,
+                       SUM(ir.amount * %s) AS total_commission,
+                       COUNT(DISTINCT ir.patient_id) AS patient_count
+                FROM income_records ir
+                JOIN staff s ON s.id = ir.doctor_id
+                JOIN staff_roles r ON r.id = s.role_id
+                WHERE ir.doctor_id = %s
+                  AND r.name = 'doctor'
+                  AND s.is_active = TRUE
+                  AND ir.service_date = %s
+                GROUP BY hour
+                ORDER BY hour
+                """,
+                (config.DOCTOR_COMMISSION_RATE, doctor_id, target),
+            )
+            rows = cur.fetchall()
+    finally:
+        release_connection(conn)
+
+    hour_map = {int(r[0]): {"total_commission": float(r[1] or 0), "patient_count": int(r[2] or 0)} for r in rows}
+    items = []
+    for hour in range(24):
+        entry = hour_map.get(hour, {"total_commission": 0.0, "patient_count": 0})
+        items.append(
+            {
+                "hour": hour,
+                "label": f"{hour:02d}:00",
+                "total_commission": round(entry["total_commission"], 2),
+                "patient_count": entry["patient_count"],
+            }
+        )
+
+    return jsonify({"date": target.isoformat(), "hours": items})
+
+
+@income_bp.route("/doctor/<int:doctor_id>/summary/hourly/export", methods=["GET"])
+def export_doctor_hourly_summary(doctor_id: int):
+    date_param = request.args.get("date")
+    if not date_param:
+        return jsonify({"error": "date_required"}), 400
+    try:
+        target = parse_date(date_param)
+    except ValueError:
+        return jsonify({"error": "invalid_date_format"}), 400
+
+    conn = get_connection()
+    try:
+        cur = conn.cursor()
+        cur.execute(
+            """
+            SELECT s.id, s.first_name, s.last_name
+            FROM staff s
+            JOIN staff_roles r ON r.id = s.role_id
+            WHERE s.id = %s AND r.name = 'doctor' AND s.is_active = TRUE
+            """,
+            (doctor_id,),
+        )
+        doctor_row = cur.fetchone()
+        if not doctor_row:
+            return jsonify({"error": "invalid_doctor"}), 400
+    finally:
+        release_connection(conn)
+
+    hourly_response = doctor_hourly_summary(doctor_id)
+    if hourly_response.status_code != 200:
+        return hourly_response
+    data = hourly_response.get_json() or {}
+    hours = data.get("hours", [])
+
+    output = io.StringIO()
+    writer = csv.writer(output)
+    writer.writerow(["Hour", "Total Commission", "Patient Count"])
+    for item in hours:
+        writer.writerow([item["label"], item["total_commission"], item["patient_count"]])
+
+    output.seek(0)
+    buffer = io.BytesIO(output.getvalue().encode("utf-8"))
+    buffer.seek(0)
+    filename = f"doctor_{doctor_id}_hourly_commission_{target.isoformat()}.csv"
+    return send_file(
+        buffer,
+        as_attachment=True,
+        download_name=filename,
+        mimetype="text/csv",
+    )

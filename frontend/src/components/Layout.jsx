@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
+import PeriodSelector from "./PeriodSelector";
 
 export default function Layout({ children }) {
   const { t, i18n } = useTranslation();
@@ -87,7 +88,7 @@ export default function Layout({ children }) {
             className={location.pathname === "/clinic" ? "nav-item active" : "nav-item"}
             onClick={() => setSidebarOpen(false)}
           >
-            <span className="nav-icon">⬡</span> {t("nav.dashboard")}
+            <span className="nav-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg></span> {t("nav.dashboard")}
           </Link>
         </nav>
 
@@ -98,14 +99,14 @@ export default function Layout({ children }) {
             className={location.pathname === "/income" ? "nav-item active" : "nav-item"}
             onClick={() => setSidebarOpen(false)}
           >
-            <span className="nav-icon">↗</span> {t("nav.income")}
+            <span className="nav-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="19" x2="12" y2="5"></line><polyline points="5 12 12 5 19 12"></polyline></svg></span> {t("nav.income")}
           </Link>
           <Link 
             to="/income/add"
             className={location.pathname === "/income/add" ? "nav-item active" : "nav-item"}
             onClick={() => setSidebarOpen(false)}
           >
-            <span className="nav-icon">+</span> {t("nav.add_income")}
+            <span className="nav-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg></span> {t("nav.add_income")}
           </Link>
         </nav>
 
@@ -116,14 +117,14 @@ export default function Layout({ children }) {
             className={location.pathname === "/outcome" ? "nav-item active" : "nav-item"}
             onClick={() => setSidebarOpen(false)}
           >
-            <span className="nav-icon">↙</span> {t("nav.expenses")}
+            <span className="nav-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><polyline points="19 12 12 19 5 12"></polyline></svg></span> {t("nav.expenses")}
           </Link>
           <Link 
             to="/outcome/add"
             className={location.pathname === "/outcome/add" ? "nav-item active" : "nav-item"}
             onClick={() => setSidebarOpen(false)}
           >
-            <span className="nav-icon">-</span> {t("nav.add_outcome", {defaultValue: "Add Outcome"})}
+            <span className="nav-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="5" y1="12" x2="19" y2="12"></line></svg></span> {t("nav.add_outcome", {defaultValue: "Add Outcome"})}
           </Link>
         </nav>
 
@@ -134,14 +135,21 @@ export default function Layout({ children }) {
             className={location.pathname === "/staff" ? "nav-item active" : "nav-item"}
             onClick={() => setSidebarOpen(false)}
           >
-            <span className="nav-icon">◈</span> {t("nav.staff")}
+            <span className="nav-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg></span> {t("nav.staff")}
+          </Link>
+          <Link
+            to="/schedule"
+            className={location.pathname === "/schedule" ? "nav-item active" : "nav-item"}
+            onClick={() => setSidebarOpen(false)}
+          >
+            <span className="nav-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg></span> {t("nav.schedule", {defaultValue: "Schedule"})}
           </Link>
           <Link
             to="/my-income"
             className={location.pathname === "/my-income" ? "nav-item active" : "nav-item"}
             onClick={() => setSidebarOpen(false)}
           >
-            <span className="nav-icon">◧</span> {t("nav.my_income")}
+            <span className="nav-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="1" x2="12" y2="23"></line><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path></svg></span> {t("nav.my_income")}
           </Link>
         </nav>
 
@@ -185,6 +193,7 @@ export default function Layout({ children }) {
                location.pathname.startsWith("/income") ? t("nav.income") :
                location.pathname.startsWith("/outcome") ? t("nav.expenses") :
                location.pathname.startsWith("/staff") ? t("nav.staff") :
+               location.pathname.startsWith("/schedule") ? t("nav.schedule", {defaultValue: "Schedule"}) :
                location.pathname.startsWith("/my-income") ? t("nav.my_income") :
                t("nav.dashboard")}
             </div>
@@ -192,25 +201,17 @@ export default function Layout({ children }) {
           </div>
           <div className="topbar-actions">
             {showPeriod && (
-              <div className="date-strip">
-                {["day", "week", "month", "year"].map(p => (
-                    <button
-                        key={p}
-                        className={`date-chip ${period === p ? "active" : ""}`}
-                        aria-label={t("income.period_selector")}
-                        title={labels[p]}
-                        onClick={() => setPeriod(p)}
-                    >
-                        {p === "month" ? "MO" : p === "week" ? "WE" : p === "day" ? "DA" : "YE"}
-                    </button>
-                ))}
-              </div>
+              <PeriodSelector 
+                value={period} 
+                onChange={setPeriod} 
+                options={["day", "week", "month", "year"]} 
+              />
             )}
-            <button className="btn btn-ghost">⇣ {t("nav.export")}</button>
+            <button className="btn btn-ghost"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg> {t("nav.export")}</button>
             {location.pathname.startsWith("/outcome") ? (
-              <button className="btn btn-primary" onClick={() => navigate("/outcome/add")}>- {t("nav.add_outcome", {defaultValue: "Add Outcome"})}</button>
+              <button className="btn btn-primary" onClick={() => navigate("/outcome/add")}><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="5" y1="12" x2="19" y2="12"></line></svg> {t("nav.add_outcome", {defaultValue: "Add Outcome"})}</button>
             ) : (
-              <button className="btn btn-primary" onClick={() => navigate("/income/add")}>+ {t("nav.add_income")}</button>
+              <button className="btn btn-primary" onClick={() => navigate("/income/add")}><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg> {t("nav.add_income")}</button>
             )}
           </div>
         </header>

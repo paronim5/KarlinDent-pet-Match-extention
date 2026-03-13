@@ -366,8 +366,39 @@ body {
   white-space: nowrap;
 }
 .pay-btn:hover {
-  border-color: var(--accent);
-  color: var(--accent);
+
+.doc-filter-controls {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.doc-filter-input {
+  padding: 6px 10px;
+  font-size: 12px;
+  width: auto;
+  min-width: 128px;
+}
+
+.doc-filter-separator {
+  align-self: center;
+  color: var(--subtext);
+  font-family: var(--font-mono);
+}
+
+.doc-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.doc-filename {
+  max-width: 240px;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
   background: rgba(249,115,22,.06);
 }
 
@@ -628,6 +659,11 @@ select.form-input { cursor: pointer; }
 
   .mobile-menu-btn { display: flex; }
   .sidebar-overlay { display: block; }
+  .doc-filter-controls { width: 100%; }
+  .doc-filter-input { min-width: 0; width: 100%; }
+  .doc-filter-separator { display: none; }
+  .doc-actions { gap: 6px; }
+  .doc-actions .pay-btn { flex: 1; text-align: center; }
 }
 
 .mobile-menu-btn {

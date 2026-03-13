@@ -1,12 +1,14 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
 import { useApi } from "../api/client.js";
+import { useAuth } from "../App.jsx";
 
 export default function AddOutcomePage() {
   const { t } = useTranslation();
   const api = useApi();
   const navigate = useNavigate();
+  const { user } = useAuth();
 
   // Tabs: "general" or "salary"
   const [activeTab, setActiveTab] = useState("general");
@@ -35,6 +37,18 @@ export default function AddOutcomePage() {
   const [salaryRange, setSalaryRange] = useState({ from: "", to: "" });
   const [timesheetSummary, setTimesheetSummary] = useState(null);
   const [hasManualSalaryAmount, setHasManualSalaryAmount] = useState(false);
+  const [salaryNotes, setSalaryNotes] = useState([]);
+  const [salaryNotesTotal, setSalaryNotesTotal] = useState(0);
+  const [salaryNotesPage, setSalaryNotesPage] = useState(1);
+  const [salaryNotesLoading, setSalaryNotesLoading] = useState(false);
+  const [salaryNotesError, setSalaryNotesError] = useState("");
+  const [signatureModalOpen, setSignatureModalOpen] = useState(false);
+  const [signatureSubmitting, setSignatureSubmitting] = useState(false);
+  const [signatureError, setSignatureError] = useState("");
+  const [signerName, setSignerName] = useState("");
+  const [isDrawing, setIsDrawing] = useState(false);
+  const [hasSignature, setHasSignature] = useState(false);
+  const signatureCanvasRef = useRef(null);
 
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
@@ -121,6 +135,10 @@ export default function AddOutcomePage() {
       setPrefillStaffId("");
       setTimesheetSummary(null);
       setHasManualSalaryAmount(false);
+      setSalaryNotes([]);
+      setSalaryNotesTotal(0);
+      setSalaryNotesPage(1);
+      setSalaryNotesError("");
       setError("");
       return;
     }
@@ -132,8 +150,14 @@ export default function AddOutcomePage() {
     
     const fetchEstimate = async () => {
       try {
-        const data = await api.get(`/staff/${selectedStaffId}/salary-estimate`);
-        const estimatedTotal = toNumber(data?.estimated_total, NaN);
+        const query = new URLSearchParams();
+        if (salaryRange.from) query.set("from", salaryRange.from);
+        if (salaryRange.to) query.set("to", salaryRange.to);
+        const estimatePath = query.toString()
+          ? `/staff/${selectedStaffId}/salary-estimate?${query.toString()}`
+          : `/staff/${selectedStaffId}/salary-estimate`;
+        const data = await api.get(estimatePath);
+        const estimatedTotal = toNumber(data?.adjusted_total ?? data?.estimated_total, NaN);
         if (!Number.isFinite(estimatedTotal)) {
           setSalaryEstimate(null);
           if (prefillAmount === null) setSalaryForm(p => ({ ...p, amount: "" }));
@@ -160,6 +184,33 @@ export default function AddOutcomePage() {
     
     fetchEstimate();
   }, [selectedStaffId, staffList, salaryRange.from, salaryRange.to]);
+
+  useEffect(() => {
+    if (!selectedStaffId) return;
+    setSalaryNotesPage(1);
+  }, [selectedStaffId]);
+
+  useEffect(() => {
+    if (!selectedStaffId) return;
+    const fetchNotes = async () => {
+      setSalaryNotesLoading(true);
+      setSalaryNotesError("");
+      try {
+        const limit = 10;
+        const offset = (salaryNotesPage - 1) * limit;
+        const data = await api.get(`/staff/${selectedStaffId}/salary-notes?limit=${limit}&offset=${offset}`);
+        setSalaryNotes(data.items || []);
+        setSalaryNotesTotal(Number(data.total || 0));
+      } catch (err) {
+        setSalaryNotes([]);
+        setSalaryNotesTotal(0);
+        setSalaryNotesError(err.message || "Failed to load salary notes");
+      } finally {
+        setSalaryNotesLoading(false);
+      }
+    };
+    fetchNotes();
+  }, [selectedStaffId, salaryNotesPage]);
 
   useEffect(() => {
     if (!selectedStaffId || staffList.length === 0) return;
@@ -228,41 +279,71 @@ export default function AddOutcomePage() {
 
   const handleSalarySubmit = async (e) => {
     e.preventDefault();
-    setSaving(true);
     setError("");
 
+    if (!selectedStaffId) {
+      setError("Please select a staff member.");
+      return;
+    }
+    const amountValue = toNumber(salaryForm.amount, NaN);
+    if (!Number.isFinite(amountValue) || amountValue <= 0) {
+      setError("Enter a valid payment amount.");
+      return;
+    }
+    if (!salaryForm.paymentDate) {
+      setError("Select a payment date.");
+      return;
+    }
+
+    if (!canSign) {
+      setSignatureError("You can only sign your own salary documents.");
+      setSignatureModalOpen(true);
+      return;
+    }
+
+    openSignatureModal();
+  };
+
+  const handleRecordSalaryWithSignature = async () => {
+    const canvas = signatureCanvasRef.current;
+    if (!canvas) return;
+
+    setSignatureSubmitting(true);
+    setSignatureError("");
     try {
-      if (!selectedStaffId) {
-        setError("Please select a staff member.");
-        return;
-      }
+      const signatureData = canvas.toDataURL("image/png");
+      const signedAt = new Date().toISOString();
+      const range = resolveReportRange();
+      
       const amountValue = toNumber(salaryForm.amount, NaN);
-      if (!Number.isFinite(amountValue) || amountValue <= 0) {
-        setError("Enter a valid payment amount.");
-        return;
-      }
-      if (!salaryForm.paymentDate) {
-        setError("Select a payment date.");
-        return;
-      }
-      await api.post("/staff/salaries", {
+
+      const payload = {
         staff_id: Number(selectedStaffId),
         amount: amountValue,
         payment_date: salaryForm.paymentDate,
         note: salaryForm.note,
-      });
+        signature: {
+          signer_name: signerName.trim(),
+          signed_at: signedAt,
+          signature_data: signatureData
+        }
+      };
+      if (range.from) payload.from = range.from;
+      if (range.to) payload.to = range.to;
+
+      const response = await api.post("/staff/salaries", payload);
 
       window.dispatchEvent(new CustomEvent("salaryPaid"));
-      window.dispatchEvent(new CustomEvent("toast", { detail: { type: "success", message: "Salary payment recorded and counter reset" } }));
-      navigate("/outcome"); // Or stay on page? Navigate seems safer.
+      window.dispatchEvent(new CustomEvent("toast", { detail: { type: "success", message: "Salary payment recorded and report signed" } }));
+      
+      // If we got a document ID, we might want to download it automatically?
+      // For now, just navigate to outcome list as requested.
+      setSignatureModalOpen(false);
+      navigate("/outcome");
     } catch (err) {
-      const msg = err.message;
-      if (msg === "invalid_staff") setError("Select a valid staff member.");
-      else if (msg === "staff_not_found") setError("Selected staff member was not found.");
-      else if (msg === "invalid_salary") setError("Enter a valid payment amount.");
-      else setError(err.message || "Failed to record salary payment");
+      setSignatureError(err.message || "Failed to record salary and sign report");
     } finally {
-      setSaving(false);
+      setSignatureSubmitting(false);
     }
   };
 
@@ -270,13 +351,118 @@ export default function AddOutcomePage() {
     ? {
         baseSalary: toNumber(salaryEstimate.base_salary ?? 0),
         commissionRate: toNumber(salaryEstimate.commission_rate ?? 0),
-        totalRevenue: toNumber(salaryEstimate.total_revenue ?? 0),
+        totalIncome: toNumber(salaryEstimate.total_income ?? 0),
+        totalLabFees: Math.max(toNumber(salaryEstimate.total_lab_fees ?? 0), 0),
         commissionPart: toNumber(salaryEstimate.commission_part ?? 0),
-        estimatedTotal: toNumber(salaryEstimate.estimated_total ?? 0)
+        adjustments: toNumber(salaryEstimate.adjustments ?? 0),
+        adjustedTotal: toNumber(salaryEstimate.adjusted_total ?? salaryEstimate.estimated_total ?? 0),
+        unpaidPatients: Array.isArray(salaryEstimate.unpaid_patients) ? salaryEstimate.unpaid_patients : []
       }
     : null;
 
   const showTimesheetSummary = Boolean(timesheetSummary);
+  const totalSalaryNotePages = Math.max(1, Math.ceil(salaryNotesTotal / 10));
+  const openSignatureModal = () => {
+    if (!selectedStaffId) return;
+    setSignatureError("");
+    setSignatureModalOpen(true);
+    setHasSignature(false);
+  };
+
+  useEffect(() => {
+    if (!signatureModalOpen) return;
+    const canvas = signatureCanvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+    const ratio = window.devicePixelRatio || 1;
+    const width = canvas.clientWidth || 320;
+    const height = canvas.clientHeight || 140;
+    canvas.width = width * ratio;
+    canvas.height = height * ratio;
+    ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
+    ctx.lineWidth = 2;
+    ctx.lineCap = "round";
+    ctx.strokeStyle = "#f1f5f9";
+  }, [signatureModalOpen]);
+
+  const selectedStaff = useMemo(
+    () => staffList.find((staffMember) => String(staffMember.id) === String(selectedStaffId)),
+    [staffList, selectedStaffId]
+  );
+
+  useEffect(() => {
+    if (!selectedStaffId) {
+      setSignerName("");
+      return;
+    }
+    if (!selectedStaff) return;
+    const fullName = [selectedStaff.first_name, selectedStaff.last_name].filter(Boolean).join(" ").trim();
+    setSignerName(fullName);
+  }, [selectedStaffId, selectedStaff]);
+
+  const getSignaturePoint = (event) => {
+    const canvas = signatureCanvasRef.current;
+    if (!canvas) return null;
+    const rect = canvas.getBoundingClientRect();
+    if ("touches" in event) {
+      const touch = event.touches[0];
+      return { x: touch.clientX - rect.left, y: touch.clientY - rect.top };
+    }
+    return { x: event.clientX - rect.left, y: event.clientY - rect.top };
+  };
+
+  const handleSignatureStart = (event) => {
+    const canvas = signatureCanvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext("2d");
+    const point = getSignaturePoint(event);
+    if (!point) return;
+    ctx.beginPath();
+    ctx.moveTo(point.x, point.y);
+    setIsDrawing(true);
+  };
+
+  const handleSignatureMove = (event) => {
+    if (!isDrawing) return;
+    const canvas = signatureCanvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext("2d");
+    const point = getSignaturePoint(event);
+    if (!point) return;
+    ctx.lineTo(point.x, point.y);
+    ctx.stroke();
+    setHasSignature(true);
+  };
+
+  const handleSignatureEnd = () => {
+    if (isDrawing) {
+      setIsDrawing(false);
+    }
+  };
+
+  const clearSignature = () => {
+    const canvas = signatureCanvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext("2d");
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    setHasSignature(false);
+  };
+
+  const resolveReportRange = () => {
+    let from = salaryRange.from;
+    let to = salaryRange.to;
+    if (!from && !to && salaryForm.paymentDate) {
+      from = salaryForm.paymentDate;
+      to = salaryForm.paymentDate;
+    }
+    return { from: from || "", to: to || "" };
+  };
+
+  const isAdmin = Boolean(user && ["admin", "administrator"].includes(String(user.role || "").toLowerCase()));
+  const canSign = Boolean(selectedStaffId && (isAdmin || (user && Number(user.id) === Number(selectedStaffId))));
+
+
 
   return (
     <div className="panel" style={{ width: '100%' }}>
@@ -452,13 +638,34 @@ export default function AddOutcomePage() {
                   <span>{formatNumber(salaryMetrics.baseSalary, { minimumFractionDigits: 2 })}</span>
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', marginBottom: '4px' }}>
-                  <span>Commission ({formatNumber(salaryMetrics.commissionRate * 100, { maximumFractionDigits: 2 })}% of {formatNumber(salaryMetrics.totalRevenue)}):</span>
+                  <span>Commission ({formatNumber(salaryMetrics.commissionRate * 100, { maximumFractionDigits: 2 })}% of {formatNumber(salaryMetrics.totalIncome)}):</span>
                   <span>{formatNumber(salaryMetrics.commissionPart, { minimumFractionDigits: 2 })}</span>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', marginBottom: '4px' }}>
+                  <span>Lab Fees Deduction:</span>
+                  <span>-{formatNumber(salaryMetrics.totalLabFees, { minimumFractionDigits: 2 })}</span>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', marginBottom: '4px' }}>
+                  <span>Adjustments:</span>
+                  <span>{formatNumber(salaryMetrics.adjustments, { minimumFractionDigits: 2 })}</span>
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: '600', borderTop: '1px solid var(--border)', paddingTop: '4px', marginTop: '4px' }}>
                   <span>Total Estimated:</span>
-                  <span>{formatNumber(salaryMetrics.estimatedTotal, { minimumFractionDigits: 2 })}</span>
+                  <span>{formatNumber(salaryMetrics.adjustedTotal, { minimumFractionDigits: 2 })}</span>
                 </div>
+                <div style={{ marginTop: '8px', fontSize: '12px', color: 'var(--text-secondary)' }}>
+                  Unpaid Patients ({salaryMetrics.unpaidPatients.length})
+                </div>
+                {salaryMetrics.unpaidPatients.length > 0 && (
+                  <div style={{ marginTop: '6px', display: 'grid', gap: '4px', maxHeight: '120px', overflowY: 'auto' }}>
+                    {salaryMetrics.unpaidPatients.map((patient, idx) => (
+                      <div key={`${patient.name}-${idx}`} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px' }}>
+                        <span>{patient.name}</span>
+                        <span className="mono">{formatNumber(patient.net_paid, { minimumFractionDigits: 2 })}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             )}
 
@@ -504,6 +711,60 @@ export default function AddOutcomePage() {
             </div>
           </div>
 
+          {selectedStaffId && (
+            <div className="panel" style={{ marginTop: '20px', background: 'var(--bg-card)', padding: '16px', borderRadius: '8px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+                <div style={{ fontSize: '14px', fontWeight: '500' }}>Salary Payment Notes</div>
+                <div style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>
+                  {salaryNotesTotal} total
+                </div>
+              </div>
+              {salaryNotesLoading && <div style={{ color: 'var(--text-secondary)' }}>Loading notes...</div>}
+              {!salaryNotesLoading && salaryNotesError && (
+                <div className="form-error">{salaryNotesError}</div>
+              )}
+              {!salaryNotesLoading && !salaryNotesError && salaryNotes.length === 0 && (
+                <div style={{ color: 'var(--text-secondary)' }}>No salary notes for this staff member.</div>
+              )}
+              {!salaryNotesLoading && !salaryNotesError && salaryNotes.length > 0 && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                  {salaryNotes.map((note) => (
+                    <div key={note.id} style={{ border: '1px solid var(--border)', borderRadius: '8px', padding: '10px 12px' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', color: 'var(--text-secondary)' }}>
+                        <span>{note.payment_date}</span>
+                        <span>{formatNumber(note.amount, { minimumFractionDigits: 2 })}</span>
+                      </div>
+                      <div style={{ marginTop: '6px', fontSize: '13px' }}>{note.note || "—"}</div>
+                    </div>
+                  ))}
+                </div>
+              )}
+              {salaryNotesTotal > 10 && (
+                <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px', marginTop: '12px' }}>
+                  <button
+                    type="button"
+                    className="btn btn-secondary"
+                    disabled={salaryNotesPage <= 1}
+                    onClick={() => setSalaryNotesPage((p) => Math.max(1, p - 1))}
+                  >
+                    Prev
+                  </button>
+                  <div style={{ alignSelf: 'center', fontSize: '12px', color: 'var(--text-secondary)' }}>
+                    {salaryNotesPage} / {totalSalaryNotePages}
+                  </div>
+                  <button
+                    type="button"
+                    className="btn btn-secondary"
+                    disabled={salaryNotesPage >= totalSalaryNotePages}
+                    onClick={() => setSalaryNotesPage((p) => Math.min(totalSalaryNotePages, p + 1))}
+                  >
+                    Next
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
+
           <div style={{ marginTop: '24px', display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
             <button type="button" className="btn btn-secondary" onClick={() => navigate("/outcome")}>
               {t("common.cancel")}
@@ -519,6 +780,67 @@ export default function AddOutcomePage() {
             </div>
           )}
         </form>
+      )}
+
+      {signatureModalOpen && (
+        <div className="modal-overlay">
+          <div className="modal" role="dialog" aria-modal="true">
+            <div className="modal-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div>Salary Report Signature</div>
+              <button
+                type="button"
+                className="btn btn-ghost"
+                onClick={() => setSignatureModalOpen(false)}
+                disabled={signatureSubmitting}
+              >
+                Close
+              </button>
+            </div>
+            <div className="modal-body" style={{ color: 'var(--text)' }}>
+              <div style={{ display: 'grid', gap: '16px' }}>
+                <div>
+                  <div className="form-label">Signer Name</div>
+                  <input
+                    className="form-input"
+                    value={signerName}
+                    placeholder="Type full name"
+                    readOnly
+                  />
+                </div>
+                <div>
+                  <div className="form-label">Digital Signature</div>
+                  <div style={{ border: '1px solid var(--border)', borderRadius: '10px', padding: '8px', background: 'var(--surface)' }}>
+                    <canvas
+                      ref={signatureCanvasRef}
+                      style={{ width: '100%', height: '140px', display: 'block', cursor: 'crosshair' }}
+                      onMouseDown={handleSignatureStart}
+                      onMouseMove={handleSignatureMove}
+                      onMouseUp={handleSignatureEnd}
+                      onMouseLeave={handleSignatureEnd}
+                      onTouchStart={handleSignatureStart}
+                      onTouchMove={handleSignatureMove}
+                      onTouchEnd={handleSignatureEnd}
+                    />
+                  </div>
+                </div>
+                {signatureError && <div className="form-error">{signatureError}</div>}
+              </div>
+            </div>
+            <div className="modal-actions">
+              <button type="button" className="btn btn-secondary" onClick={clearSignature} disabled={signatureSubmitting}>
+                Clear
+              </button>
+              <button
+                type="button"
+                className="btn btn-primary"
+                onClick={handleRecordSalaryWithSignature}
+                disabled={signatureSubmitting || !hasSignature || !signerName.trim() || !canSign}
+              >
+                {signatureSubmitting ? "Recording..." : "Record Salary & Sign"}
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

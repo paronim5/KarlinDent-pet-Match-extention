@@ -69,7 +69,7 @@ afterEach(() => {
 
 const setupApi = () => {
   getMock.mockImplementation((path) => {
-    if (path.startsWith("/staff?role=doctor")) {
+    if (path.startsWith("/staff?role=doctor&working_on=")) {
       return Promise.resolve([{ id: 1, last_name: "House" }]);
     }
     if (path === "/patients/receipt-reasons") {

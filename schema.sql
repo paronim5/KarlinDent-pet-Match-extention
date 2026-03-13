@@ -8,6 +8,7 @@ DROP TABLE IF EXISTS income_records CASCADE;
 DROP TABLE IF EXISTS outcome_records CASCADE;
 DROP TABLE IF EXISTS outcome_categories CASCADE;
 DROP TABLE IF EXISTS salary_payments CASCADE;
+DROP TABLE IF EXISTS staff_documents CASCADE;
 DROP TABLE IF EXISTS patients CASCADE;
 DROP TABLE IF EXISTS staff CASCADE;
 DROP TABLE IF EXISTS staff_roles CASCADE;
@@ -78,6 +79,28 @@ $$ LANGUAGE plpgsql;
 CREATE TRIGGER trg_salary_payment_after_insert
 AFTER INSERT ON salary_payments
 FOR EACH ROW EXECUTE FUNCTION update_last_paid_at();
+
+-- ============================================================
+-- STAFF DOCUMENTS (signed salary reports)
+-- ============================================================
+CREATE TABLE staff_documents (
+    id              SERIAL PRIMARY KEY,
+    staff_id        INT NOT NULL REFERENCES staff(id) ON DELETE CASCADE,
+    document_type   VARCHAR(60) NOT NULL,
+    period_from     DATE,
+    period_to       DATE,
+    signed_at       TIMESTAMPTZ,
+    signer_name     VARCHAR(150) NOT NULL,
+    signature_hash  VARCHAR(64) NOT NULL,
+    signature_token VARCHAR(64),
+    file_path       TEXT NOT NULL,
+    created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX idx_staff_documents_staff ON staff_documents(staff_id);
+CREATE INDEX idx_staff_documents_type ON staff_documents(document_type);
+CREATE INDEX idx_staff_documents_period ON staff_documents(period_from, period_to);
+CREATE INDEX idx_staff_documents_signed_at ON staff_documents(signed_at);
 
 -- ============================================================
 -- PATIENTS

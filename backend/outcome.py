@@ -475,6 +475,17 @@ def create_timesheet_payroll():
             (staff_id, total_amount, payment_date, note),
         )
         payment_id = cur.fetchone()[0]
+        try:
+            cur.execute(
+                """
+                DELETE FROM staff_timesheets
+                WHERE staff_id = %s AND work_date BETWEEN %s AND %s
+                """,
+                (staff_id, range_from, range_to),
+            )
+        except psycopg2.errors.UndefinedTable:
+            conn.rollback()
+            cur = conn.cursor()
         conn.commit()
     except Exception:
         conn.rollback()

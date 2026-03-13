@@ -279,6 +279,7 @@ const resources = {
         "expenses": "Расходы",
         "staff": "Сотрудники",
         "my_income": "Мой доход",
+        "schedule": "График",
         "export": "Экспорт",
         "add_income": "Добавить доход",
         "add_outcome": "Добавить расход"

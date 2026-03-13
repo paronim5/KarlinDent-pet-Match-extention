@@ -71,10 +71,16 @@ export default function AddIncomePage() {
     }
   }, [id, isEdit]);
 
-  const loadDoctors = async () => {
+  const loadDoctors = async (workingDate) => {
     try {
-      const items = await api.get("/staff?role=doctor");
+      const query = workingDate
+        ? `/staff?role=doctor&working_on=${encodeURIComponent(workingDate)}`
+        : "/staff?role=doctor";
+      const items = await api.get(query);
       setDoctors(items);
+      if (form.doctorId && !items.some((d) => String(d.id) === String(form.doctorId))) {
+        setForm((p) => ({ ...p, doctorId: "" }));
+      }
     } catch {
       setDoctors([]);
     }
@@ -99,10 +105,16 @@ export default function AddIncomePage() {
   };
 
   useEffect(() => {
-    loadDoctors();
+    loadDoctors(form.serviceDate);
     loadReceiptReasons();
     loadMedicines();
   }, []);
+
+  useEffect(() => {
+    if (form.serviceDate) {
+      loadDoctors(form.serviceDate);
+    }
+  }, [form.serviceDate]);
 
   useEffect(() => {
     if (!form.patientInput || form.patientLocked) {
