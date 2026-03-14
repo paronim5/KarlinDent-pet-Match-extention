@@ -386,6 +386,16 @@ export default function AddOutcomePage() {
     ctx.strokeStyle = "#f1f5f9";
   }, [signatureModalOpen]);
 
+  useEffect(() => {
+    if (!signatureModalOpen) return;
+    document.documentElement.classList.add("auth-overlay-lock");
+    document.body.classList.add("auth-overlay-lock");
+    return () => {
+      document.documentElement.classList.remove("auth-overlay-lock");
+      document.body.classList.remove("auth-overlay-lock");
+    };
+  }, [signatureModalOpen]);
+
   const selectedStaff = useMemo(
     () => staffList.find((staffMember) => String(staffMember.id) === String(selectedStaffId)),
     [staffList, selectedStaffId]

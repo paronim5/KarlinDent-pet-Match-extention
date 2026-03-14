@@ -4,6 +4,7 @@ import { useTranslation } from "react-i18next";
 import PeriodSelector from "./PeriodSelector";
 
 export default function Layout({ children }) {
+  const mobileBreakpoint = 834;
   const { t, i18n } = useTranslation();
   const location = useLocation();
   const navigate = useNavigate();
@@ -90,7 +91,7 @@ export default function Layout({ children }) {
     const current = touchCurrentRef.current;
     touchStartRef.current = null;
     touchCurrentRef.current = null;
-    if (!start || !current || window.innerWidth > 768) return;
+    if (!start || !current || window.innerWidth > mobileBreakpoint) return;
     const deltaX = current.x - start.x;
     const deltaY = Math.abs(current.y - start.y);
     if (!isSidebarOpen && start.x <= 36 && deltaX > 64 && deltaY < 56) {
