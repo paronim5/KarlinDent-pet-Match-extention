@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import PeriodSelector from "./PeriodSelector";
@@ -9,6 +9,8 @@ export default function Layout({ children }) {
   const navigate = useNavigate();
   const [isSidebarOpen, setSidebarOpen] = useState(false);
   const [period, setPeriod] = useState(() => localStorage.getItem("globalPeriod") || "month");
+  const touchStartRef = useRef(null);
+  const touchCurrentRef = useRef(null);
   
   const labels = useMemo(() => ({
     year: t("income.period.year"),
@@ -70,9 +72,44 @@ export default function Layout({ children }) {
     i18n.changeLanguage(lng);
   };
 
+  const handleTouchStart = (event) => {
+    const touch = event.touches?.[0];
+    if (!touch) return;
+    touchStartRef.current = { x: touch.clientX, y: touch.clientY };
+    touchCurrentRef.current = { x: touch.clientX, y: touch.clientY };
+  };
+
+  const handleTouchMove = (event) => {
+    const touch = event.touches?.[0];
+    if (!touch) return;
+    touchCurrentRef.current = { x: touch.clientX, y: touch.clientY };
+  };
+
+  const handleTouchEnd = () => {
+    const start = touchStartRef.current;
+    const current = touchCurrentRef.current;
+    touchStartRef.current = null;
+    touchCurrentRef.current = null;
+    if (!start || !current || window.innerWidth > 768) return;
+    const deltaX = current.x - start.x;
+    const deltaY = Math.abs(current.y - start.y);
+    if (!isSidebarOpen && start.x <= 36 && deltaX > 64 && deltaY < 56) {
+      setSidebarOpen(true);
+      return;
+    }
+    if (isSidebarOpen && deltaX < -64 && deltaY < 56) {
+      setSidebarOpen(false);
+    }
+  };
+
   return (
-    <div className="shell">
+    <div className="shell" onTouchStart={handleTouchStart} onTouchMove={handleTouchMove} onTouchEnd={handleTouchEnd}>
       {isSidebarOpen && <div className="sidebar-overlay" onClick={() => setSidebarOpen(false)}></div>}
+      <button className={`mobile-menu-fab ${isSidebarOpen ? "open" : ""}`} onClick={() => setSidebarOpen(!isSidebarOpen)} aria-label="Open navigation menu">
+        <span></span>
+        <span></span>
+        <span></span>
+      </button>
       <aside className={`sidebar ${isSidebarOpen ? "open" : ""}`}>
         <div className="logo">
           <div className="logo-mark">M</div>

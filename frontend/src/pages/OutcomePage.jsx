@@ -340,10 +340,10 @@ export default function OutcomePage() {
       {error && <div className="form-error">SYSTEM ERROR: {error}</div>}
       
       <div className="panel">
-        <div className="panel-header" style={{ marginBottom: '16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <div className="panel-header outcome-header" style={{ marginBottom: '16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <div className="panel-title">{t("outcome.history_title")}</div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                <div style={{ display: 'flex', gap: '8px' }}>
+          <div className="outcome-header-controls" style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <div className="outcome-date-range" style={{ display: 'flex', gap: '8px' }}>
                     <input 
                         type="date" 
                         value={customRange.from} 
@@ -366,7 +366,7 @@ export default function OutcomePage() {
                         style={{ padding: '4px 8px', fontSize: '12px', width: 'auto' }}
                     />
                 </div>
-                <div style={{ fontSize: '14px', color: 'var(--text-secondary)' }}>
+                <div className="outcome-header-total" style={{ fontSize: '14px', color: 'var(--text-secondary)' }}>
                     {t("outcome.total")}: <strong>{(totalOutcome || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</strong>
                 </div>
           </div>

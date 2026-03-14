@@ -9,18 +9,60 @@ import "@testing-library/jest-dom/vitest";
 vi.mock("../api/client", () => ({
   useApi: vi.fn()
 }));
+vi.mock("react-i18next", () => ({
+  useTranslation: () => ({
+    t: (key, vars = {}) => {
+      const dict = {
+        "schedule.add_shift": "+ Add Shift",
+        "schedule.modal.new_shift": "New Shift",
+        "schedule.modal.schedule_staff": "SCHEDULE STAFF",
+        "schedule.modal.note_placeholder": "Shift details...",
+        "schedule.modal.save_shift": "Save Shift →",
+        "schedule.on_duty_today": "On Duty Today",
+        "schedule.no_on_duty_today": "No doctors on duty today",
+        "schedule.duty_item": `Dr. ${vars.lastName} – ${vars.role} ${vars.start}-${vars.end}`,
+        "schedule.today": "Today",
+        "schedule.calendar": "Calendar",
+        "schedule.stats.shifts": "Shifts",
+        "schedule.stats.visible_staff": "Visible staff",
+        "schedule.stats.on_duty_now": "On duty now",
+        "schedule.stats.roles": "Roles",
+        "schedule.modal.edit_shift": "Edit Shift",
+        "schedule.modal.update_details": "UPDATE DETAILS",
+        "schedule.modal.staff_member": "Staff Member",
+        "schedule.modal.start_time": "Start Time",
+        "schedule.modal.end_time": "End Time",
+        "schedule.modal.notes": "Notes",
+        "schedule.modal.delete": "Delete",
+        "schedule.modal.cancel": "Cancel",
+        "schedule.errors.save_shift": `Failed to save shift: ${vars.message || ""}`,
+        "schedule.errors.delete_shift": `Failed to delete shift: ${vars.message || ""}`,
+        "schedule.errors.confirm_delete": "Are you sure you want to delete this shift?",
+        "clinic.weekdays.mon": "Mo",
+        "clinic.weekdays.tue": "Tu",
+        "clinic.weekdays.wed": "We",
+        "clinic.weekdays.thu": "Th",
+        "clinic.weekdays.fri": "Fr",
+        "clinic.weekdays.sat": "Sa",
+        "clinic.weekdays.sun": "Su"
+      };
+      return dict[key] || key;
+    }
+  })
+}));
 
 const mockStaff = [
-  { id: 1, first_name: "John", last_name: "Doe", role: "doctor", is_active: true },
+  { id: 1, first_name: "Alex", last_name: "Ivanov", role: "General Medicine", is_active: true },
   { id: 2, first_name: "Jane", last_name: "Smith", role: "assistant", is_active: true }
 ];
 
+const todayISO = new Date().toISOString().slice(0, 10);
 const mockShifts = [
   {
     id: 1,
     staff_id: 1,
-    start: "2025-03-12T09:00:00.000Z",
-    end: "2025-03-12T17:00:00.000Z",
+    start: `${todayISO}T08:00:00`,
+    end: `${todayISO}T16:00:00`,
     note: "Day Shift"
   }
 ];
@@ -102,6 +144,18 @@ describe("ClinicSchedule", () => {
         staff_id: 1,
         note: "Night Shift"
       }));
+    });
+  });
+
+  test("lists on-duty doctor for today in sidebar", async () => {
+    render(<ClinicSchedule />);
+
+    await waitFor(() => {
+      expect(mockApi.get).toHaveBeenCalledWith("/staff");
+    });
+
+    await waitFor(() => {
+      expect(screen.getByText("Dr. Ivanov – General Medicine 08:00-16:00")).toBeInTheDocument();
     });
   });
 });

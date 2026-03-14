@@ -1,8 +1,10 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import { useApi } from "../api/client.js";
 
 export default function StaffRolePage() {
+  const { t } = useTranslation();
   const { id } = useParams();
   const navigate = useNavigate();
   const api = useApi();
@@ -39,10 +41,10 @@ export default function StaffRolePage() {
       setTimesheets(ts);
     } catch (err) {
       const msg = err.message;
-      if (msg === "staff_not_found") setError("Staff member not found.");
-      else if (msg === "invalid_staff") setError("Select a valid staff member.");
-      else if (msg === "not_found") setError("Timesheets are unavailable for this staff member.");
-      else setError(err.message || "Unable to load timesheets");
+      if (msg === "staff_not_found") setError(t("staff_role.errors.staff_not_found"));
+      else if (msg === "invalid_staff") setError(t("staff_role.errors.invalid_staff"));
+      else if (msg === "not_found") setError(t("staff_role.errors.timesheets_unavailable"));
+      else setError(err.message || t("staff_role.errors.load_timesheets"));
     }
   };
 
@@ -57,7 +59,7 @@ export default function StaffRolePage() {
       const items = await api.get(`/staff/${id}/documents?${params.toString()}`);
       setDocuments(items);
     } catch (err) {
-      setDocumentsError(err.message || "Unable to load salary documents");
+      setDocumentsError(err.message || t("staff_role.errors.load_documents"));
     } finally {
       setDocumentsLoading(false);
     }
@@ -81,10 +83,10 @@ export default function StaffRolePage() {
       const headers = getAuthHeaders();
       const response = await fetch(`/api/staff/${id}/documents/${documentId}/download`, { headers });
       if (!response.ok) {
-        throw new Error("Unable to download document");
+        throw new Error(t("staff_role.errors.download_document"));
       }
       const blob = await response.blob();
-      const fileName = fallbackName || "salary-report.pdf";
+      const fileName = fallbackName || t("staff_role.file_default");
       const url = window.URL.createObjectURL(blob);
       const link = document.createElement("a");
       link.href = url;
@@ -94,7 +96,7 @@ export default function StaffRolePage() {
       document.body.removeChild(link);
       window.URL.revokeObjectURL(url);
     } catch (err) {
-      setDocumentsError(err.message || "Unable to download document");
+      setDocumentsError(err.message || t("staff_role.errors.download_document"));
     }
   };
 
@@ -103,7 +105,7 @@ export default function StaffRolePage() {
       const headers = getAuthHeaders();
       const response = await fetch(`/api/staff/${id}/documents/${documentId}/view`, { headers });
       if (!response.ok) {
-        throw new Error("Unable to open document preview");
+        throw new Error(t("staff_role.errors.preview_document"));
       }
       const blob = await response.blob();
       const url = window.URL.createObjectURL(blob);
@@ -112,7 +114,7 @@ export default function StaffRolePage() {
         window.URL.revokeObjectURL(url);
       }, 60000);
     } catch (err) {
-      setDocumentsError(err.message || "Unable to open document preview");
+      setDocumentsError(err.message || t("staff_role.errors.preview_document"));
     }
   };
 
@@ -147,15 +149,15 @@ export default function StaffRolePage() {
     setError("");
     try {
       if (!staff) {
-        setError("Staff member not found.");
+        setError(t("staff_role.errors.staff_not_found"));
         return;
       }
       if (!from || !to) {
-        setError("Select a valid date range.");
+        setError(t("staff_role.errors.invalid_range"));
         return;
       }
       if (totalHours <= 0) {
-        setError("No hours recorded for selected period.");
+        setError(t("staff_role.errors.no_hours"));
         return;
       }
       const params = new URLSearchParams();
@@ -176,7 +178,7 @@ export default function StaffRolePage() {
     setError("");
     try {
       if (!form.workDate || !form.startTime || !form.endTime) {
-        setError("Please enter date, start time, and end time.");
+        setError(t("staff_role.errors.required_shift_fields"));
         return;
       }
       if (editingId) {
@@ -205,11 +207,11 @@ export default function StaffRolePage() {
       await loadAll();
     } catch (err) {
       const msg = err.message;
-      if (msg === "invalid_time_range") setError("End time must be after start time.");
-      else if (msg === "timesheet_not_found") setError("Shift not found.");
-      else if (msg === "staff_not_found") setError("Staff member not found.");
-      else if (msg === "invalid_data") setError("Enter valid shift details.");
-      else setError(err.message || "Unable to save shift");
+      if (msg === "invalid_time_range") setError(t("staff_role.errors.invalid_time_range"));
+      else if (msg === "timesheet_not_found") setError(t("staff_role.errors.shift_not_found"));
+      else if (msg === "staff_not_found") setError(t("staff_role.errors.staff_not_found"));
+      else if (msg === "invalid_data") setError(t("staff_role.errors.invalid_shift_data"));
+      else setError(err.message || t("staff_role.errors.save_shift"));
     } finally {
       setSaving(false);
     }
@@ -226,15 +228,15 @@ export default function StaffRolePage() {
   };
 
   const handleDelete = async (tsId) => {
-    if (!window.confirm("Are you sure you want to delete this shift?")) return;
+    if (!window.confirm(t("staff_role.confirm_delete_shift"))) return;
     setError("");
     try {
       await api.delete(`/outcome/timesheets/${tsId}`);
       await loadAll();
     } catch (err) {
       const msg = err.message;
-      if (msg === "timesheet_not_found") setError("Shift not found.");
-      else setError(err.message || "Unable to delete shift");
+      if (msg === "timesheet_not_found") setError(t("staff_role.errors.shift_not_found"));
+      else setError(err.message || t("staff_role.errors.delete_shift"));
     }
   };
 
@@ -252,29 +254,52 @@ export default function StaffRolePage() {
     await loadAll(from, to);
   };
 
-  const title = staff ? staff.role.charAt(0).toUpperCase() + staff.role.slice(1) : "Staff member";
+  const title = staff ? staff.role.charAt(0).toUpperCase() + staff.role.slice(1) : t("staff_role.title_fallback");
+
+  const exportTimesheets = () => {
+    const rows = [["date", "start", "end", "hours", "note"], ...timesheets.map((item) => [item.work_date, item.start_time, item.end_time, item.hours, item.note || ""])];
+    const csv = rows.map((row) => row.map((cell) => `"${String(cell).replaceAll('"', '""')}"`).join(",")).join("\n");
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+    const url = window.URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `timesheets-${id}-${from}-${to}.csv`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    window.URL.revokeObjectURL(url);
+  };
 
   return (
     <>
-      {error && <div className="form-error">SYSTEM ERROR: {error}</div>}
+      {error && <div className="form-error">{t("staff_role.system_error", { error })}</div>}
+      <div className="staff-role-toolbar">
+        <div className="doc-filter-controls">
+          <input type="date" value={from} onChange={(e) => setFrom(e.target.value)} className="form-input doc-filter-input" aria-label={t("income.date_range.from")} />
+          <span className="doc-filter-separator">-</span>
+          <input type="date" value={to} onChange={(e) => setTo(e.target.value)} className="form-input doc-filter-input" aria-label={t("income.date_range.to")} />
+          <button type="button" className="btn btn-ghost" onClick={handlePeriodApply}>{t("staff_role.search")}</button>
+          <button type="button" className="btn btn-primary" onClick={exportTimesheets}>{t("common.export_csv")}</button>
+        </div>
+      </div>
       
       <div className="two-col">
         <div className="panel">
           <div className="panel-header">
             <div>
-              <div className="panel-title">Timesheet Log</div>
-              <div className="panel-meta">{timesheets.length} entries</div>
+              <div className="panel-title">{t("staff_role.timesheet_log")}</div>
+              <div className="panel-meta">{t("staff_role.entries_count", { count: timesheets.length })}</div>
             </div>
           </div>
           <div className="table-wrapper">
             <table className="data-table">
               <thead>
                 <tr>
-                  <th>Date</th>
-                  <th>Start</th>
-                  <th>End</th>
-                  <th>Hours</th>
-                  <th>Actions</th>
+                  <th>{t("staff_role.headers.date")}</th>
+                  <th>{t("staff_role.headers.start")}</th>
+                  <th>{t("staff_role.headers.end")}</th>
+                  <th>{t("staff_role.headers.hours")}</th>
+                  <th>{t("staff_role.headers.actions")}</th>
                 </tr>
               </thead>
               <tbody>
@@ -285,7 +310,7 @@ export default function StaffRolePage() {
                     <td className="mono">{t.end_time.slice(0, 5)}</td>
                     <td className="mono" style={{ color: "var(--accent)" }}>{t.hours.toFixed(2)}</td>
                     <td>
-                      <button className="pay-btn" onClick={() => handleEdit(t)}>Edit</button>
+                      <button className="pay-btn" onClick={() => handleEdit(t)}>{t("staff.actions.edit")}</button>
                     </td>
                   </tr>
                 ))}
@@ -294,30 +319,30 @@ export default function StaffRolePage() {
           </div>
         </div>
 
-        <div className="quick-form">
+        <div className="quick-form staff-role-sidepanel">
           <div className="panel" style={{ marginBottom: "16px" }}>
             <div className="panel-header">
               <div>
-                <div className="panel-title">Salary Summary</div>
+                <div className="panel-title">{t("staff_role.salary_summary")}</div>
                 <div className="panel-meta">{from} → {to}</div>
               </div>
             </div>
             <div style={{ display: "grid", gap: "8px", padding: "12px" }}>
               <div style={{ display: "flex", justifyContent: "space-between" }}>
-                <span>Total Hours</span>
+                <span>{t("outcome.salary_panel.total_hours")}</span>
                 <span className="mono">{totalHours.toFixed(2)}</span>
               </div>
               <div style={{ display: "flex", justifyContent: "space-between" }}>
-                <span>Base Rate</span>
+                <span>{t("outcome.salary_panel.base_rate")}</span>
                 <span className="mono">{baseRate.toLocaleString(undefined, { style: "currency", currency: "CZK" })}</span>
               </div>
               <div style={{ display: "flex", justifyContent: "space-between", fontWeight: "600" }}>
-                <span>Calculated Salary</span>
+                <span>{t("outcome.salary_panel.calculated_salary")}</span>
                 <span className="mono">{totalWages.toLocaleString(undefined, { style: "currency", currency: "CZK" })}</span>
               </div>
               <div style={{ display: "flex", justifyContent: "flex-end", gap: "8px" }}>
                 <button type="button" className="btn btn-primary" onClick={handleRecordSalary} disabled={payingSalary}>
-                  {payingSalary ? "Recording..." : "Record Salary"}
+                  {payingSalary ? t("staff_role.recording") : t("staff_role.record_salary")}
                 </button>
               </div>
             </div>
@@ -325,8 +350,8 @@ export default function StaffRolePage() {
           <div className="panel" style={{ marginBottom: "16px" }}>
             <div className="panel-header" style={{ justifyContent: "space-between", alignItems: "center" }}>
               <div>
-                <div className="panel-title">Salary Documents</div>
-                <div className="panel-meta">Signed reports</div>
+                <div className="panel-title">{t("staff_role.salary_documents")}</div>
+                <div className="panel-meta">{t("staff_role.signed_reports")}</div>
               </div>
               <div className="doc-filter-controls">
                 <input
@@ -343,7 +368,7 @@ export default function StaffRolePage() {
                   className="form-input doc-filter-input"
                 />
                 <button className="btn btn-ghost" onClick={() => loadDocuments(documentFilter.from, documentFilter.to)}>
-                  Search
+                  {t("staff_role.search")}
                 </button>
               </div>
             </div>
@@ -351,11 +376,11 @@ export default function StaffRolePage() {
               <table className="data-table">
                 <thead>
                   <tr>
-                    <th>Period</th>
-                    <th>Signed At</th>
-                    <th>Signer</th>
-                    <th>File</th>
-                    <th>Action</th>
+                    <th>{t("staff_role.headers_docs.period")}</th>
+                    <th>{t("staff_role.headers_docs.signed_at")}</th>
+                    <th>{t("staff_role.headers_docs.signer")}</th>
+                    <th>{t("staff_role.headers_docs.file")}</th>
+                    <th>{t("staff_role.headers_docs.action")}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -377,7 +402,7 @@ export default function StaffRolePage() {
                   )}
                   {!documentsLoading && !documentsError && documents.length === 0 && (
                     <tr>
-                      <td colSpan={5} className="empty-state">No salary documents found</td>
+                      <td colSpan={5} className="empty-state">{t("staff_role.no_documents")}</td>
                     </tr>
                   )}
                   {!documentsLoading && !documentsError && documents.map((doc) => (
@@ -385,14 +410,14 @@ export default function StaffRolePage() {
                       <td className="mono">{doc.period_from || "—"} → {doc.period_to || "—"}</td>
                       <td className="mono">{doc.signed_at ? new Date(doc.signed_at).toLocaleString() : "—"}</td>
                       <td>{doc.signer_name || "—"}</td>
-                      <td className="mono doc-filename">{doc.file_name || "salary-report.pdf"}</td>
+                      <td className="mono doc-filename">{doc.file_name || t("staff_role.file_default")}</td>
                       <td>
                         <div className="doc-actions">
                           <button className="pay-btn" onClick={() => previewDocument(doc.id)}>
-                            View
+                            {t("staff_role.view")}
                           </button>
                           <button className="pay-btn" onClick={() => downloadDocument(doc.id, doc.file_name)}>
-                            Download
+                            {t("staff_role.download")}
                           </button>
                         </div>
                       </td>
@@ -402,30 +427,30 @@ export default function StaffRolePage() {
               </table>
             </div>
           </div>
-          <div className="panel-title" style={{ marginBottom: '16px' }}>{editingId ? 'Edit Shift' : 'Add Shift'}</div>
+          <div className="panel-title" style={{ marginBottom: '16px' }}>{editingId ? t("staff_role.edit_shift") : t("staff_role.add_shift")}</div>
           <form onSubmit={handleAdd} style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
             <div>
-              <div className="form-label">Date</div>
+              <div className="form-label">{t("staff_role.shift_date")}</div>
               <input className="form-input" type="date" value={form.workDate} onChange={(e) => setForm(p => ({...p, workDate: e.target.value}))} />
             </div>
             <div className="form-grid">
               <div>
-                <div className="form-label">Start Time</div>
+                <div className="form-label">{t("staff_role.shift_start")}</div>
                 <input className="form-input" type="time" value={form.startTime} onChange={(e) => setForm(p => ({...p, startTime: e.target.value}))} />
               </div>
               <div>
-                <div className="form-label">End Time</div>
+                <div className="form-label">{t("staff_role.shift_end")}</div>
                 <input className="form-input" type="time" value={form.endTime} onChange={(e) => setForm(p => ({...p, endTime: e.target.value}))} />
               </div>
             </div>
             <div>
-              <div className="form-label">Note</div>
-              <input className="form-input" placeholder="Shift details..." value={form.note} onChange={(e) => setForm(p => ({...p, note: e.target.value}))} />
+              <div className="form-label">{t("staff_role.shift_note")}</div>
+              <input className="form-input" placeholder={t("staff_role.shift_placeholder")} value={form.note} onChange={(e) => setForm(p => ({...p, note: e.target.value}))} />
             </div>
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px', marginTop: '8px' }}>
               {editingId && <button type="button" className="btn btn-ghost" onClick={handleCancelEdit}>Cancel</button>}
               <button type="submit" className="btn btn-primary" disabled={saving}>
-                {saving ? "Saving..." : (editingId ? "Update Shift" : "+ Add Shift")}
+                {saving ? t("staff_role.saving") : (editingId ? t("staff_role.update_shift") : `+ ${t("staff_role.add_shift")}`)}
               </button>
             </div>
           </form>

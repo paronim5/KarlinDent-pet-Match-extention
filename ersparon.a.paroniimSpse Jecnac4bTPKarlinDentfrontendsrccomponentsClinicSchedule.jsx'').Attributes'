@@ -1,0 +1,296 @@
+warning: in the working copy of 'frontend/src/components/ClinicSchedule.jsx', LF will be replaced by CRLF the next time Git touches it
+[1mdiff --git a/frontend/src/components/ClinicSchedule.jsx b/frontend/src/components/ClinicSchedule.jsx[m
+[1mindex 371de2c..99756c8 100644[m
+[1m--- a/frontend/src/components/ClinicSchedule.jsx[m
+[1m+++ b/frontend/src/components/ClinicSchedule.jsx[m
+[36m@@ -1,122 +1,211 @@[m
+[31m-[m
+[31m-import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';[m
+[31m-import { useApi } from '../api/client';[m
+[31m-import PeriodSelector from './PeriodSelector';[m
+[31m-import './ClinicSchedule.css';[m
+[31m-[m
+[32m+[m[32mimport React, { useState, useEffect, useCallback, useMemo } from "react";[m
+[32m+[m[32mimport { useApi } from "../api/client";[m
+[32m+[m[32mimport PeriodSelector from "./PeriodSelector";[m
+[32m+[m
+[32m+[m[32mconst C = {[m
+[32m+[m[32m  bg: "#0b0c0e",[m
+[32m+[m[32m  surface: "#111318",[m
+[32m+[m[32m  card: "#161a22",[m
+[32m+[m[32m  border: "#1f2535",[m
+[32m+[m[32m  border2: "#252d3d",[m
+[32m+[m[32m  accent: "#f97316",[m
+[32m+[m[32m  green: "#22c55e",[m
+[32m+[m[32m  blue: "#3b82f6",[m
+[32m+[m[32m  muted: "#4b5563",[m
+[32m+[m[32m  text: "#f1f5f9",[m
+[32m+[m[32m  subtext: "#94a3b8",[m
+[32m+[m[32m  red: "#ef4444",[m
+[32m+[m[32m};[m
+[32m+[m
+[32m+[m[32mconst STAFF_PALETTE = ["#f97316", "#3b82f6", "#a855f7", "#14b8a6", "#22c55e", "#ec4899", "#f59e0b", "#6366f1", "#ef4444"];[m
+ const START_H = 7;[m
+[31m-const END_H = 20;[m
+[31m-const SLOT_H = 60; // px per hour[m
+[31m-const PX_PER_MIN = SLOT_H / 60;[m
+[32m+[m[32mconst END_H = 22;[m
+[32m+[m[32mconst HOUR_W = 78;[m
+[32m+[m[32mconst ROW_H = 52;[m
+[32m+[m[32mconst LABEL_W = 240;[m
+[32m+[m[32mconst SLOT_H = END_H - START_H;[m
+[32m+[m[32mconst TOTAL_W = SLOT_H * HOUR_W;[m
+[32m+[m
+[32m+[m[32mconst f2 = (n) => String(n).padStart(2, "0");[m
+[32m+[m[32mconst toM = (h, m) => h * 60 + m;[m
+[32m+[m[32mconst durH = (start, end) => {[m
+[32m+[m[32m  const mins = (end - start) / 60000;[m
+[32m+[m[32m  const h = Math.floor(mins / 60);[m
+[32m+[m[32m  const m = mins % 60;[m
+[32m+[m[32m  return m ? `${h}h ${m}m` : `${h}h`;[m
+[32m+[m[32m};[m
+[32m+[m[32mconst dayKey = (d) => `${d.getFullYear()}-${f2(d.getMonth() + 1)}-${f2(d.getDate())}`;[m
+[32m+[m[32mconst sameDay = (a, b) => dayKey(a) === dayKey(b);[m
+[32m+[m
+[32m+[m[32mfunction MiniCal({ selected, onSelect }) {[m
+[32m+[m[32m  const [view, setView] = useState(new Date(selected));[m
+[32m+[m[32m  const year = view.getFullYear();[m
+[32m+[m[32m  const month = view.getMonth();[m
+[32m+[m[32m  const first = new Date(year, month, 1);[m
+[32m+[m[32m  const startDow = (first.getDay() + 6) % 7;[m
+[32m+[m[32m  const daysInMonth = new Date(year, month + 1, 0).getDate();[m
+[32m+[m[32m  const prevMonthDays = new Date(year, month, 0).getDate();[m
+[32m+[m[32m  const today = new Date();[m
+[32m+[m[32m  const cells = [];[m
+[32m+[m[32m  for (let i = 0; i < startDow; i += 1) {[m
+[32m+[m[32m    cells.push({ day: prevMonthDays - startDow + i + 1, other: true, key: `p-${i}` });[m
+[32m+[m[32m  }[m
+[32m+[m[32m  for (let d = 1; d <= daysInMonth; d += 1) {[m
+[32m+[m[32m    cells.push({ day: d, other: false, key: `d-${d}` });[m
+[32m+[m[32m  }[m
+[32m+[m[32m  const nav = (step) => {[m
+[32m+[m[32m    const next = new Date(view);[m
+[32m+[m[32m    next.setMonth(next.getMonth() + step);[m
+[32m+[m[32m    setView(next);[m
+[32m+[m[32m  };[m
+[32m+[m[32m  return ([m
+[32m+[m[32m    <div>[m
+[32m+[m[32m      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>[m
+[32m+[m[32m        <button onClick={() => nav(-1)} style={smallBtn}>‹</button>[m
+[32m+[m[32m        <span style={{ color: C.text, fontSize: 12, fontWeight: 700 }}>[m
+[32m+[m[32m          {view.toLocaleString("default", { month: "long", year: "numeric" })}[m
+[32m+[m[32m        </span>[m
+[32m+[m[32m        <button onClick={() => nav(1)} style={smallBtn}>›</button>[m
+[32m+[m[32m      </div>[m
+[32m+[m[32m      <div style={{ display: "grid", gridTemplateColumns: "repeat(7,1fr)", gap: 2 }}>[m
+[32m+[m[32m        {["Mo", "Tu", "We", "Th", "Fr", "Sa", "Su"].map((d) => ([m
+[32m+[m[32m          <div key={d} style={{ color: C.muted, fontSize: 9, textAlign: "center" }}>{d}</div>[m
+[32m+[m[32m        ))}[m
+[32m+[m[32m        {cells.map((cell) => {[m
+[32m+[m[32m          if (cell.other) return <div key={cell.key} style={{ opacity: 0.3, textAlign: "center", color: C.muted, fontSize: 10 }}>{cell.day}</div>;[m
+[32m+[m[32m          const d = new Date(year, month, cell.day);[m
+[32m+[m[32m          const isSel = sameDay(d, selected);[m
+[32m+[m[32m          const isToday = sameDay(d, today);[m
+[32m+[m[32m          return ([m
+[32m+[m[32m            <div[m
+[32m+[m[32m              key={cell.key}[m
+[32m+[m[32m              onClick={() => onSelect(d)}[m
+[32m+[m[32m              style={{[m
+[32m+[m[32m                cursor: "pointer",[m
+[32m+[m[32m                textAlign: "center",[m
+[32m+[m[32m                fontSize: 10,[m
+[32m+[m[32m                borderRadius: 4,[m
+[32m+[m[32m                padding: "2px 0",[m
+[32m+[m[32m                background: isSel ? C.accent : "transparent",[m
+[32m+[m[32m                color: isSel ? "#fff" : isToday ? C.accent : C.subtext,[m
+[32m+[m[32m                fontWeight: isSel || isToday ? 700 : 400,[m
+[32m+[m[32m              }}[m
+[32m+[m[32m            >[m
+[32m+[m[32m              {cell.day}[m
+[32m+[m[32m            </div>[m
+[32m+[m[32m          );[m
+[32m+[m[32m        })}[m
+[32m+[m[32m      </div>[m
+[32m+[m[32m    </div>[m
+[32m+[m[32m  );[m
+[32m+[m[32m}[m
+ [m
+[31m-const COLORS = [[m
+[31m-  { bg: '#f97316', dc: 'dc-orange' },[m
+[31m-  { bg: '#3b82f6', dc: 'dc-blue' },[m
+[31m-  { bg: '#a855f7', dc: 'dc-purple' },[m
+[31m-  { bg: '#14b8a6', dc: 'dc-teal' },[m
+[31m-  { bg: '#22c55e', dc: 'dc-green' },[m
+[31m-  { bg: '#ef4444', dc: 'dc-red' },[m
+[31m-];[m
+[32m+[m[32mfunction ShiftModal({ open, editingShift, form, setForm, staff, onClose, onSave, onDelete }) {[m
+[32m+[m[32m  if (!open) return null;[m
+[32m+[m[32m  return ([m
+[32m+[m[32m    <div style={overlay} onClick={(e) => e.target === e.currentTarget && onClose()}>[m
+[32m+[m[32m      <div style={modal}>[m
+[32m+[m[32m        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "16px 18px", borderBottom: `1px solid ${C.border}` }}>[m
+[32m+[m[32m          <div>[m
+[32m+[m[32m            <div style={{ color: C.text, fontWeight: 700 }}>{editingShift ? "Edit Shift" : "New Shift"}</div>[m
+[32m+[m[32m            <div style={{ color: C.subtext, fontSize: 10 }}>{editingShift ? "UPDATE DETAILS" : "SCHEDULE STAFF"}</div>[m
+[32m+[m[32m          </div>[m
+[32m+[m[32m          <button onClick={onClose} style={smallBtn}>✕</button>[m
+[32m+[m[32m        </div>[m
+[32m+[m[32m        <div style={{ padding: 18, display: "grid", gap: 10 }}>[m
+[32m+[m[32m          <label style={label}>Staff Member</label>[m
+[32m+[m[32m          <select value={form.staff_id} onChange={(e) => setForm((p) => ({ ...p, staff_id: e.target.value }))} style={input}>[m
+[32m+[m[32m            {staff.map((s) => <option key={s.id} value={s.id}>{s.first_name} {s.last_name} ({s.role})</option>)}[m
+[32m+[m[32m          </select>[m
+[32m+[m[32m          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>[m
+[32m+[m[32m            <div>[m
+[32m+[m[32m              <label style={label}>Start Time</label>[m
+[32m+[m[32m              <input type="time" value={form.start_time} onChange={(e) => setForm((p) => ({ ...p, start_time: e.target.value }))} style={input} />[m
+[32m+[m[32m            </div>[m
+[32m+[m[32m            <div>[m
+[32m+[m[32m              <label style={label}>End Time</label>[m
+[32m+[m[32m              <input type="time" value={form.end_time} onChange={(e) => setForm((p) => ({ ...p, end_time: e.target.value }))} style={input} />[m
+[32m+[m[32m            </div>[m
+[32m+[m[32m          </div>[m
+[32m+[m[32m          <label style={label}>Notes</label>[m
+[32m+[m[32m          <input value={form.note} onChange={(e) => setForm((p) => ({ ...p, note: e.target.value }))} placeholder="Shift details..." style={input} />[m
+[32m+[m[32m        </div>[m
+[32m+[m[32m        <div style={{ display: "flex", justifyContent: "space-between", gap: 8, padding: "0 18px 18px" }}>[m
+[32m+[m[32m          <div>{editingShift ? <button onClick={onDelete} style={{ ...button, border: `1px solid ${C.red}`, color: C.red, background: "transparent" }}>Delete</button> : null}</div>[m
+[32m+[m[32m          <div style={{ display: "flex", gap: 8 }}>[m
+[32m+[m[32m            <button onClick={onClose} style={{ ...button, border: `1px solid ${C.border}`, color: C.subtext, background: C.card }}>Cancel</button>[m
+[32m+[m[32m            <button onClick={onSave} style={{ ...button, border: "none", color: "#fff", background: C.accent }}>Save Shift →</button>[m
+[32m+[m[32m          </div>[m
+[32m+[m[32m        </div>[m
+[32m+[m[32m      </div>[m
+[32m+[m[32m    </div>[m
+[32m+[m[32m  );[m
+[32m+[m[32m}[m
+ [m
+ export default function ClinicSchedule({ api: injectedApi }) {[m
+   const defaultApi = useApi();[m
+[31m-  // Memoize api to prevent infinite loops in useEffect[m
+[31m-  const api = useMemo(() => injectedApi || defaultApi, [injectedApi]); // defaultApi is unstable, but we can ignore it if we assume useApi is stateless[m
+[31m-  [m
+[31m-  const storedView = localStorage.getItem("globalPeriod") || 'day';[m
+[31m-  const initialView = ['day', 'week'].includes(storedView) ? storedView : 'day';[m
+[31m-[m
+[32m+[m[32m  const api = useMemo(() => injectedApi || defaultApi, [injectedApi]);[m
+[32m+[m[32m  const initialView = ["day", "week"].includes(localStorage.getItem("globalPeriod")) ? localStorage.getItem("globalPeriod") : "day";[m
+   const [date, setDate] = useState(new Date());[m
+[31m-  const [view, setView] = useState(initialView); // Sync initial state[m
+[32m+[m[32m  const [view, setView] = useState(initialView);[m
+   const [staff, setStaff] = useState([]);[m
+[31m-  const [shifts, setShifts] = useState([]);[m
+   const [visibleStaff, setVisibleStaff] = useState(new Set());[m
+[32m+[m[32m  const [shifts, setShifts] = useState([]);[m
+   const [loading, setLoading] = useState(false);[m
+[31m-  [m
+[31m-  // Modal State[m
+   const [modalOpen, setModalOpen] = useState(false);[m
+[31m-  const [editingShift, setEditingShift] = useState(null); // null = new[m
+[31m-  const [modalForm, setModalForm] = useState({[m
+[31m-    staff_id: '',[m
+[31m-    start_time: '09:00',[m
+[31m-    end_time: '17:00',[m
+[31m-    note: ''[m
+[31m-  });[m
+[32m+[m[32m  const [editingShift, setEditingShift] = useState(null);[m
+[32m+[m[32m  const [modalForm, setModalForm] = useState({ staff_id: "", start_time: "09:00", end_time: "17:00", note: "" });[m
+ [m
+[31m-  // Active Staff Modal State[m
+[31m-  const [activeStaffModal, setActiveStaffModal] = useState({[m
+[31m-    isOpen: false,[m
+[31m-    time: null,[m
+[31m-    staffList: [][m
+[31m-  });[m
+[31m-[m
+[31m-  // Listen for period changes from Layout[m
+[31m-  useEffect(() => {[m
+[31m-    const handler = (event) => {[m
+[31m-        if (event.detail && event.detail.period && ['day', 'week'].includes(event.detail.period)) {[m
+[31m-            setView(event.detail.period);[m
+[31m-        }[m
+[31m-    };[m
+[31m-    window.addEventListener("periodChanged", handler);[m
+[31m-    return () => window.removeEventListener("periodChanged", handler);[m
+[31m-  }, []);[m
+[32m+[m[32m  const weekStart = useMemo(() => {[m
+[32m+[m[32m    const d = new Date(date);[m
+[32m+[m[32m    const day = d.getDay();[m
+[32m+[m[32m    const diff = d.getDate() - day + (day === 0 ? -6 : 1);[m
+[32m+[m[32m    d.setDate(diff);[m
+[32m+[m[32m    d.setHours(0, 0, 0, 0);[m
+[32m+[m[32m    return d;[m
+[32m+[m[32m  }, [date]);[m
+[32m+[m[32m  const weekDays = useMemo(() => Array.from({ length: 7 }).map((_, i) => new Date(weekStart.getFullYear(), weekStart.getMonth(), weekStart.getDate() + i)), [weekStart]);[m
+[32m+[m[32m  const visibleStaffList = useMemo(() => staff.filter((s) => visibleStaff.has(s.id)), [staff, visibleStaff]);[m
+ [m
+[31m-  // Fetch Staff[m
+   const fetchStaff = useCallback(async () => {[m
+     try {[m
+[31m-      const data = await api.get('/staff');[m
+[31m-      // Show all active staff for scheduling[m
+[31m-      const activeStaff = data.filter(s => s.is_active).map((s, i) => ({[m
+[32m+[m[32m      const data = await api.get("/staff");[m
+[32m+[m[32m      const active = data.filter((s) => s.is_active).map((s, i) => ({[m
+         ...s,[m
+[31m-        color: COLORS[i % COLORS.length].bg,[m
+[31m-        dc: COLORS[i % COLORS.length].dc,[m
+[31m-        initials: `${s.first_name[0]}${s.last_name[0]}`[m
+[32m+[m[32m        color: STAFF_PALETTE[i % STAFF_PALETTE.length],[m
+[32m+[m[32m        initials: `${s.first_name?.[0] || ""}${s.last_name?.[0] || ""}`.toUpperCase(),[m
+       }));[m
+[31m-      setStaff(activeStaff);[m
+[31m-      setVisibleStaff(new Set(activeStaff.map(s => s.id)));[m
+[31m-      if (activeStaff.length > 0 && !modalForm.staff_id) {[m
+[31m-        setModalForm(prev => ({ ...prev, staff_id: activeStaff[0].id }));[m
+[31m-      }[m
+[32m+[m[32m      setStaff(active);[m
+[32m+[m[32m      setVisibleStaff((prev) => (prev.size ? prev : new Set(active.map((s) => s.id))));[m
+[32m+[m[32m      setModalForm((prev) => ({ ...prev, staff_id: prev.staff_id || active[0]?.id || "" }));[m
+     } catch (err) {[m
+       console.error("Failed to fetch staff", err);[m
+     }[m
+[31m-  }, [api]); // api is now stable-ish[m
+[32m+[m[32m  }, [api]);[m
+ [m
+[31m-  // Fetch Shifts[m
+   const fetchShifts = useCallback(async () => {[m
+     setLoading(true);[m
+     try {[m
+[31m-      const startOfPeriod = new Date(date);[m
+[31m-      const endOfPeriod = new Date(date);[m
+[31m-[m
+[31m-      if (view === 'day') {[m
+[31m-        startOfPeriod.setHours(0, 0, 0, 0);[m
+[31m-        endOfPeriod.setHours(23, 59, 59, 999);[m
+[31m-      } else if (view === 'week') {[m
+[31m-        const day = startOfPeriod.getDay(); // 0 (Sun) - 6 (Sat)[m
+[31m-        const diff = startOfPeriod.getDate() - day + (day === 0 ? -6 : 1); // Adjust for Mon start[m
+[31m-        startOfPeriod.setDate(diff);[m
+[31m-        startOfPeriod.setHours(0,0,0,0);[m
+[31m-        [m
+[31m-        endOfPeriod.setDate(diff + 6);[m
+[31m-        endOfPeriod.setHours(23,59,59,999);[m
+[31m-      } else if (view === 'month') {[m
+[31m-        startOfPeriod.setDate(1);[m
+[31m-        startOfPeriod.setHours(0,0,0,0);[m
+[31m-        endOfPeriod.setMonth(endOfPeriod.getMonth() + 1);[m
+[31m-        endOfPeriod.setDate(0);[m
+[31m-        endOfPeriod.setHours(23,59,59,999);[m
+[32m+[m[32m      const start = new Date(date);[m
+[32m+[m[32m      const end = new Date(date);[m
+[32m+[m[32m      if (view === "week") {[m
+[32m+[m[32m        start.setDate(weekStart.getDate());[m
+[32m+[m[32m        start.setMonth(weekStart.getMonth());[m
+[32m+[m[32m        start.setFullYear(weekStart.getFullYear());[m
+[32m+[m[32m        end.setDate(weekStart.getDate() + 6);[m
+[32m+[m[32m        end.setMonth(weekStart.getMonth());[m
+[32m+[m[32m        end.setFullYear(weekStart.getFullYear());[m
+       }[m
+[31m-[m
+[31m-      const query = `?start=${startOfPeriod.toISOString()}&end=${endOfPeriod.toISOString()}`;[m
+[31m-      const data = await api.get(`/schedule${query}`);[m
+[32m+[m[32m      start.setHours(0, 0, 0, 0);[m
+[32m+[m[32m      end.setHours(23, 59, 59, 999);[m
+[32m+[m[32m      const data = await api.get(`/schedule?start=${start.toISOString()}&end=${end.toISOString()}`);[m
+       setShifts(data);

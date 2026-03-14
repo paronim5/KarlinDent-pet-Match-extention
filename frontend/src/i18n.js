@@ -14,6 +14,7 @@ const resources = {
         "expenses": "Expenses",
         "staff": "Staff",
         "my_income": "My Income",
+        "schedule": "Schedule",
         "export": "Export",
         "add_income": "Add Income",
         "add_outcome": "Add Outcome"
@@ -210,6 +211,39 @@ const resources = {
         "history_title": "Outcome History",
         "expenses": "Expenses",
         "salaries": "Salaries",
+        "salary_panel": {
+          "breakdown": "Salary Breakdown",
+          "period": "Period",
+          "total_hours": "Total Hours",
+          "base_rate": "Base Rate",
+          "calculated_salary": "Calculated Salary",
+          "last_payment": "Last Payment",
+          "never": "Never",
+          "base_salary": "Base Salary",
+          "commission": "Commission ({{rate}}% of {{income}})",
+          "lab_fees_deduction": "Lab Fees Deduction",
+          "adjustments": "Adjustments",
+          "total_estimated": "Total Estimated",
+          "unpaid_patients": "Unpaid Patients ({{count}})"
+        },
+        "salary_notes": {
+          "title": "Salary Payment Notes",
+          "total": "{{count}} total",
+          "loading": "Loading notes...",
+          "empty": "No salary notes for this staff member.",
+          "prev": "Prev",
+          "next": "Next"
+        },
+        "signature": {
+          "title": "Salary Report Signature",
+          "close": "Close",
+          "signer_name": "Signer Name",
+          "signer_placeholder": "Type full name",
+          "digital_signature": "Digital Signature",
+          "clear": "Clear",
+          "record_and_sign": "Record Salary & Sign",
+          "recording": "Recording..."
+        },
         "hints": {
           "adjust_amount": "You can adjust this amount (floor/ceil) as needed."
         },
@@ -244,9 +278,39 @@ const resources = {
       "staff": {
         "title": "Staff Directory",
         "add_staff": "Add Staff",
+        "edit_staff": "Edit Staff",
+        "active_members": "{{count}} active members",
+        "items_count": "{{count}} items",
         "medicines_title": "Medicine / recepts",
         "medicines_add": "Add medicine",
         "medicines_placeholder": "Enter medicine name",
+        "actions": {
+          "pay": "Pay",
+          "view": "View",
+          "edit": "Edit"
+        },
+        "table_meta": {
+          "base_commission": "Base/Commission",
+          "total_earned": "Total Earned",
+          "actions": "Actions"
+        },
+        "pay_modal": {
+          "title": "Pay Salary: {{name}}",
+          "base_salary": "Base Salary",
+          "commission": "Commission",
+          "adjustments": "Adjustments",
+          "total": "Total",
+          "processing": "Processing...",
+          "confirm": "Confirm Payment"
+        },
+        "form": {
+          "first_name": "First Name",
+          "last_name": "Last Name",
+          "commission_rate": "Commission Rate (%)",
+          "base_hourly_salary": "Base/Hourly Salary",
+          "phone": "Phone",
+          "email": "Email"
+        },
         "table": {
           "name": "Name",
           "role": "Role",
@@ -263,7 +327,103 @@ const resources = {
           "receptionist": "Receptionist"
         },
         "errors": {
-          "load_staff": "Unable to load staff directory"
+          "load_staff": "Unable to load staff directory",
+          "load_medicines": "Unable to load medicines",
+          "add_medicine": "Unable to add medicine",
+          "remove_medicine": "Unable to remove medicine"
+        }
+      },
+      "staff_role": {
+        "title_fallback": "Staff member",
+        "system_error": "SYSTEM ERROR: {{error}}",
+        "timesheet_log": "Timesheet Log",
+        "entries_count": "{{count}} entries",
+        "headers": {
+          "date": "Date",
+          "start": "Start",
+          "end": "End",
+          "hours": "Hours",
+          "actions": "Actions"
+        },
+        "salary_summary": "Salary Summary",
+        "recording": "Recording...",
+        "record_salary": "Record Salary",
+        "salary_documents": "Salary Documents",
+        "signed_reports": "Signed reports",
+        "search": "Search",
+        "headers_docs": {
+          "period": "Period",
+          "signed_at": "Signed At",
+          "signer": "Signer",
+          "file": "File",
+          "action": "Action"
+        },
+        "no_documents": "No salary documents found",
+        "file_default": "salary-report.pdf",
+        "view": "View",
+        "download": "Download",
+        "edit_shift": "Edit Shift",
+        "add_shift": "Add Shift",
+        "shift_date": "Date",
+        "shift_start": "Start Time",
+        "shift_end": "End Time",
+        "shift_note": "Note",
+        "shift_placeholder": "Shift details...",
+        "update_shift": "Update Shift",
+        "saving": "Saving...",
+        "confirm_delete_shift": "Are you sure you want to delete this shift?",
+        "errors": {
+          "staff_not_found": "Staff member not found.",
+          "invalid_staff": "Select a valid staff member.",
+          "timesheets_unavailable": "Timesheets are unavailable for this staff member.",
+          "load_timesheets": "Unable to load timesheets",
+          "load_documents": "Unable to load salary documents",
+          "download_document": "Unable to download document",
+          "preview_document": "Unable to open document preview",
+          "invalid_range": "Select a valid date range.",
+          "no_hours": "No hours recorded for selected period.",
+          "required_shift_fields": "Please enter date, start time, and end time.",
+          "invalid_time_range": "End time must be after start time.",
+          "shift_not_found": "Shift not found.",
+          "invalid_shift_data": "Enter valid shift details.",
+          "save_shift": "Unable to save shift",
+          "delete_shift": "Unable to delete shift"
+        }
+      },
+      "schedule": {
+        "today": "Today",
+        "add_shift": "+ Add Shift",
+        "stats": {
+          "shifts": "Shifts",
+          "visible_staff": "Visible staff",
+          "on_duty_now": "On duty now",
+          "roles": "Roles"
+        },
+        "calendar": "Calendar",
+        "on_duty_today": "On Duty Today",
+        "no_on_duty_today": "No doctors on duty today",
+        "duty_item": "Dr. {{lastName}} – {{role}} {{start}}-{{end}}",
+        "filters": {
+          "no_staff": "No staff matching filters"
+        },
+        "modal": {
+          "edit_shift": "Edit Shift",
+          "new_shift": "New Shift",
+          "update_details": "UPDATE DETAILS",
+          "schedule_staff": "SCHEDULE STAFF",
+          "staff_member": "Staff Member",
+          "start_time": "Start Time",
+          "end_time": "End Time",
+          "notes": "Notes",
+          "note_placeholder": "Shift details...",
+          "delete": "Delete",
+          "cancel": "Cancel",
+          "save_shift": "Save Shift →"
+        },
+        "errors": {
+          "save_shift": "Failed to save shift: {{message}}",
+          "delete_shift": "Failed to delete shift: {{message}}",
+          "confirm_delete": "Are you sure you want to delete this shift?"
         }
       }
     }
@@ -294,8 +454,8 @@ const resources = {
         "loading": "Загрузка...",
         "error": "Произошла ошибка",
         "retry": "Повторить",
-        "export_csv": "Экспорт CSV",
-        "export_pdf": "Экспорт PDF",
+        "export_csv": "Экспорт в CSV",
+        "export_pdf": "Экспорт в PDF",
         "view": "Просмотр",
         "none": "Нет",
         "never": "Никогда"
@@ -307,7 +467,7 @@ const resources = {
         "net_profit": "Чистая прибыль",
         "active_staff": "Активные сотрудники",
         "unique_patients": "Уникальные пациенты",
-        "daily_pnl": "Дневной P&L",
+        "daily_pnl": "Дневная прибыль/убыток",
         "daily_income_outcome": "Доходы и расходы по дням",
         "last_30_days": "Последние 30 дней",
         "period_meta": "Статистика за период: {{period}}",
@@ -322,7 +482,7 @@ const resources = {
           "net_profit": "Чистая прибыль",
           "income_trend": "Тренд доходов",
           "expense_trend": "Тренд расходов",
-          "payment_ratio": "Наличные vs карта",
+          "payment_ratio": "Соотношение наличных и карты",
           "lab_ratio": "Лаборатория % от дохода"
         },
         "patients": {
@@ -427,8 +587,8 @@ const resources = {
           "select_doctor_placeholder": "Выберите врача..."
         },
         "banner": {
-          "found_basic": "Найден: {{name}} – Оплачено всего: €{{total}}",
-          "found_with_last": "Найден: {{name}} – Оплачено всего: €{{total}}, Последнее лечение: {{doctor}}, {{date}}",
+          "found_basic": "Найден пациент: {{name}} — оплачено всего: €{{total}}",
+          "found_with_last": "Найден пациент: {{name}} — оплачено всего: €{{total}}, последнее лечение: {{doctor}}, {{date}}",
           "new_patient": "Будет создан новый пациент"
         },
         "validation": {
@@ -476,6 +636,39 @@ const resources = {
         "history_title": "История расходов",
         "expenses": "Расходы",
         "salaries": "Зарплаты",
+        "salary_panel": {
+          "breakdown": "Сводка по зарплате",
+          "period": "Период",
+          "total_hours": "Всего часов",
+          "base_rate": "Базовая ставка",
+          "calculated_salary": "Рассчитанная зарплата",
+          "last_payment": "Последняя выплата",
+          "never": "Никогда",
+          "base_salary": "Базовый оклад",
+          "commission": "Комиссия ({{rate}}% от {{income}})",
+          "lab_fees_deduction": "Удержание за лабораторию",
+          "adjustments": "Корректировки",
+          "total_estimated": "Итого (оценка)",
+          "unpaid_patients": "Неоплаченные пациенты ({{count}})"
+        },
+        "salary_notes": {
+          "title": "Примечания по выплатам",
+          "total": "{{count}} всего",
+          "loading": "Загрузка примечаний...",
+          "empty": "Для этого сотрудника нет примечаний по выплатам.",
+          "prev": "Назад",
+          "next": "Вперёд"
+        },
+        "signature": {
+          "title": "Подпись зарплатного отчёта",
+          "close": "Закрыть",
+          "signer_name": "Имя подписанта",
+          "signer_placeholder": "Введите полное имя",
+          "digital_signature": "Цифровая подпись",
+          "clear": "Очистить",
+          "record_and_sign": "Провести выплату и подписать",
+          "recording": "Сохранение..."
+        },
         "hints": {
           "adjust_amount": "При необходимости скорректируйте сумму (округление вниз/вверх)."
         },
@@ -510,13 +703,43 @@ const resources = {
       "staff": {
         "title": "Список сотрудников",
         "add_staff": "Добавить сотрудника",
+        "edit_staff": "Редактировать сотрудника",
+        "active_members": "{{count}} активных сотрудников",
+        "items_count": "{{count}} позиций",
         "medicines_title": "Лекарства / рецепты",
         "medicines_add": "Добавить лекарство",
         "medicines_placeholder": "Введите название лекарства",
+        "actions": {
+          "pay": "Выплатить",
+          "view": "Открыть",
+          "edit": "Изменить"
+        },
+        "table_meta": {
+          "base_commission": "Оклад/комиссия",
+          "total_earned": "Всего заработано",
+          "actions": "Действия"
+        },
+        "pay_modal": {
+          "title": "Выплата зарплаты: {{name}}",
+          "base_salary": "Базовый оклад",
+          "commission": "Комиссия",
+          "adjustments": "Корректировки",
+          "total": "Итого",
+          "processing": "Обработка...",
+          "confirm": "Подтвердить выплату"
+        },
+        "form": {
+          "first_name": "Имя",
+          "last_name": "Фамилия",
+          "commission_rate": "Ставка комиссии (%)",
+          "base_hourly_salary": "Базовый/почасовой оклад",
+          "phone": "Телефон",
+          "email": "Эл. почта"
+        },
         "table": {
           "name": "Имя",
           "role": "Роль",
-          "email": "Email",
+          "email": "Эл. почта",
           "status": "Статус"
         },
         "roles": {
@@ -529,7 +752,103 @@ const resources = {
           "receptionist": "Регистратор"
         },
         "errors": {
-          "load_staff": "Не удалось загрузить список сотрудников"
+          "load_staff": "Не удалось загрузить список сотрудников",
+          "load_medicines": "Не удалось загрузить лекарства",
+          "add_medicine": "Не удалось добавить лекарство",
+          "remove_medicine": "Не удалось удалить лекарство"
+        }
+      },
+      "staff_role": {
+        "title_fallback": "Сотрудник",
+        "system_error": "СИСТЕМНАЯ ОШИБКА: {{error}}",
+        "timesheet_log": "Журнал смен",
+        "entries_count": "{{count}} записей",
+        "headers": {
+          "date": "Дата",
+          "start": "Начало",
+          "end": "Конец",
+          "hours": "Часы",
+          "actions": "Действия"
+        },
+        "salary_summary": "Сводка по зарплате",
+        "recording": "Сохранение...",
+        "record_salary": "Провести выплату",
+        "salary_documents": "Зарплатные документы",
+        "signed_reports": "Подписанные отчёты",
+        "search": "Поиск",
+        "headers_docs": {
+          "period": "Период",
+          "signed_at": "Подписано",
+          "signer": "Подписал",
+          "file": "Файл",
+          "action": "Действие"
+        },
+        "no_documents": "Зарплатные документы не найдены",
+        "file_default": "salary-report.pdf",
+        "view": "Просмотр",
+        "download": "Скачать",
+        "edit_shift": "Редактировать смену",
+        "add_shift": "Добавить смену",
+        "shift_date": "Дата",
+        "shift_start": "Время начала",
+        "shift_end": "Время окончания",
+        "shift_note": "Примечание",
+        "shift_placeholder": "Детали смены...",
+        "update_shift": "Обновить смену",
+        "saving": "Сохранение...",
+        "confirm_delete_shift": "Вы уверены, что хотите удалить эту смену?",
+        "errors": {
+          "staff_not_found": "Сотрудник не найден.",
+          "invalid_staff": "Выберите корректного сотрудника.",
+          "timesheets_unavailable": "Табель недоступен для этого сотрудника.",
+          "load_timesheets": "Не удалось загрузить табель",
+          "load_documents": "Не удалось загрузить зарплатные документы",
+          "download_document": "Не удалось скачать документ",
+          "preview_document": "Не удалось открыть предпросмотр документа",
+          "invalid_range": "Выберите корректный диапазон дат.",
+          "no_hours": "За выбранный период часы не зафиксированы.",
+          "required_shift_fields": "Укажите дату, время начала и окончания.",
+          "invalid_time_range": "Время окончания должно быть позже времени начала.",
+          "shift_not_found": "Смена не найдена.",
+          "invalid_shift_data": "Введите корректные данные смены.",
+          "save_shift": "Не удалось сохранить смену",
+          "delete_shift": "Не удалось удалить смену"
+        }
+      },
+      "schedule": {
+        "today": "Сегодня",
+        "add_shift": "+ Добавить смену",
+        "stats": {
+          "shifts": "Смены",
+          "visible_staff": "Видимый персонал",
+          "on_duty_now": "На смене сейчас",
+          "roles": "Роли"
+        },
+        "calendar": "Календарь",
+        "on_duty_today": "На смене сегодня",
+        "no_on_duty_today": "Сегодня нет дежурных врачей",
+        "duty_item": "Д-р {{lastName}} — {{role}} {{start}}-{{end}}",
+        "filters": {
+          "no_staff": "Нет сотрудников по выбранным фильтрам"
+        },
+        "modal": {
+          "edit_shift": "Редактировать смену",
+          "new_shift": "Новая смена",
+          "update_details": "ОБНОВЛЕНИЕ ДАННЫХ",
+          "schedule_staff": "НАЗНАЧЕНИЕ СМЕНЫ",
+          "staff_member": "Сотрудник",
+          "start_time": "Время начала",
+          "end_time": "Время окончания",
+          "notes": "Примечания",
+          "note_placeholder": "Детали смены...",
+          "delete": "Удалить",
+          "cancel": "Отмена",
+          "save_shift": "Сохранить смену →"
+        },
+        "errors": {
+          "save_shift": "Не удалось сохранить смену: {{message}}",
+          "delete_shift": "Не удалось удалить смену: {{message}}",
+          "confirm_delete": "Вы уверены, что хотите удалить эту смену?"
         }
       }
     }
@@ -541,7 +860,7 @@ i18n
   .use(initReactI18next)
   .init({
     resources,
-    fallbackLng: 'en',
+    fallbackLng: 'ru',
     interpolation: {
       escapeValue: false
     }

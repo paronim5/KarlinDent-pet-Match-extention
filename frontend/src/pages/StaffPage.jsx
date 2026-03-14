@@ -264,7 +264,7 @@ export default function StaffPage() {
       setMedicines(items);
     } catch (err) {
       setMedicines([]);
-      setMedicineError(err.message || "Unable to load medicines");
+      setMedicineError(err.message || t("staff.errors.load_medicines"));
     }
   };
 
@@ -282,7 +282,7 @@ export default function StaffPage() {
       setMedicineName("");
       await loadMedicines();
     } catch (err) {
-      setMedicineError(err.message || "Unable to add medicine");
+      setMedicineError(err.message || t("staff.errors.add_medicine"));
     } finally {
       setMedicineSaving(false);
     }
@@ -295,7 +295,7 @@ export default function StaffPage() {
       await api.delete(`/staff/medicines/${medicineId}`);
       await loadMedicines();
     } catch (err) {
-      setMedicineError(err.message || "Unable to remove medicine");
+      setMedicineError(err.message || t("staff.errors.remove_medicine"));
     } finally {
       setMedicineSaving(false);
     }
@@ -303,13 +303,13 @@ export default function StaffPage() {
 
   return (
     <>
-      {error && <div className="form-error">SYSTEM ERROR: {error}</div>}
+      {error && <div className="form-error">{t("staff_role.system_error", { error })}</div>}
       
       <div className="panel">
         <div className="panel-header">
           <div>
             <div className="panel-title">{t("staff.title")}</div>
-            <div className="panel-meta">{filteredStaff.length} active members</div>
+            <div className="panel-meta">{t("staff.active_members", { count: filteredStaff.length })}</div>
           </div>
           <div className="topbar-actions">
             <input className="form-input" placeholder={t("common.search")} value={search} onChange={(e) => setSearch(e.target.value)} />
@@ -322,9 +322,9 @@ export default function StaffPage() {
               <tr>
                 <th>{t("staff.table.name")}</th>
                 <th>{t("staff.table.role")}</th>
-                <th>Base/Commission</th>
-                <th>Total Earned</th>
-                <th>Actions</th>
+                <th>{t("staff.table_meta.base_commission")}</th>
+                <th>{t("staff.table_meta.total_earned")}</th>
+                <th>{t("staff.table_meta.actions")}</th>
               </tr>
             </thead>
             <tbody>
@@ -347,7 +347,7 @@ export default function StaffPage() {
                         const label = t(`staff.roles.${member.role}`);
                         if (label && !label.startsWith("staff.roles.")) return label;
                         const role = String(member.role || "");
-                        return role ? role.charAt(0).toUpperCase() + role.slice(1) : "Staff";
+                        return role ? role.charAt(0).toUpperCase() + role.slice(1) : t("staff.title");
                       })()}
                     </span>
                   </td>
@@ -365,9 +365,9 @@ export default function StaffPage() {
                   </td>
                   <td>
                     <div style={{ display: "flex", gap: "8px" }}>
-                      <button className="pay-btn" onClick={() => openPayModal(member)}>Pay</button>
-                      <button className="pay-btn" onClick={() => member.role === 'doctor' ? navigate(`/staff/doctor/${member.id}`) : navigate(`/staff/role/${member.id}`)}>{t("common.view")}</button>
-                      <button className="pay-btn" onClick={() => openEditForm(member)}>{t("common.edit")}</button>
+                      <button className="pay-btn" onClick={() => openPayModal(member)}>{t("staff.actions.pay")}</button>
+                      <button className="pay-btn" onClick={() => member.role === 'doctor' ? navigate(`/staff/doctor/${member.id}`) : navigate(`/staff/role/${member.id}`)}>{t("staff.actions.view")}</button>
+                      <button className="pay-btn" onClick={() => openEditForm(member)}>{t("staff.actions.edit")}</button>
                     </div>
                   </td>
                 </tr>
@@ -381,24 +381,24 @@ export default function StaffPage() {
         <div className="modal-overlay">
           <div className="modal">
             <div className="modal-header">
-                Pay Salary: {payModal.member.first_name} {payModal.member.last_name}
+                {t("staff.pay_modal.title", { name: `${payModal.member.first_name} ${payModal.member.last_name}` })}
             </div>
             <div className="modal-body">
                 <div style={{ display: 'grid', gap: '8px' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                        <span>Base Salary:</span>
+                        <span>{t("staff.pay_modal.base_salary")}:</span>
                         <span className="mono">{(payModal.estimate.base_salary || 0).toLocaleString(undefined, { style: "currency", currency: "CZK" })}</span>
                     </div>
                     <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                        <span>Commission:</span>
+                        <span>{t("staff.pay_modal.commission")}:</span>
                         <span className="mono">{(payModal.estimate.commission_part || 0).toLocaleString(undefined, { style: "currency", currency: "CZK" })}</span>
                     </div>
                     <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                        <span>Adjustments:</span>
+                        <span>{t("staff.pay_modal.adjustments")}:</span>
                         <span className="mono">{(payModal.estimate.adjustments || 0).toLocaleString(undefined, { style: "currency", currency: "CZK" })}</span>
                     </div>
                     <div style={{ borderTop: '1px solid var(--border)', paddingTop: '8px', marginTop: '4px', display: 'flex', justifyContent: 'space-between', fontWeight: 'bold' }}>
-                        <span>Total:</span>
+                        <span>{t("staff.pay_modal.total")}:</span>
                         <span className="mono" style={{ color: 'var(--green)' }}>{(payModal.estimate.estimated_total || 0).toLocaleString(undefined, { style: "currency", currency: "CZK" })}</span>
                     </div>
                 </div>
@@ -406,7 +406,7 @@ export default function StaffPage() {
             <div className="modal-actions">
               <button className="btn btn-ghost" onClick={() => setPayModal(null)}>Cancel</button>
               <button className="btn btn-primary" onClick={handlePaySalary} disabled={paying}>
-                {paying ? "Processing..." : "Confirm Payment"}
+                {paying ? t("staff.pay_modal.processing") : t("staff.pay_modal.confirm")}
               </button>
             </div>
           </div>
@@ -416,15 +416,15 @@ export default function StaffPage() {
       {showForm && (
         <div className="modal-backdrop">
           <div className="quick-form" style={{ width: '100%', maxWidth: '500px' }}>
-            <div className="panel-title" style={{ marginBottom: '16px' }}>{editingMember ? "Edit Staff" : t("staff.add_staff")}</div>
+            <div className="panel-title" style={{ marginBottom: '16px' }}>{editingMember ? t("staff.edit_staff") : t("staff.add_staff")}</div>
             <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
               <div className="form-grid">
                 <div>
-                  <div className="form-label">First Name</div>
+                  <div className="form-label">{t("staff.form.first_name")}</div>
                   <input className="form-input" required value={form.firstName} onChange={(e) => setForm(p => ({...p, firstName: e.target.value}))} />
                 </div>
                 <div>
-                  <div className="form-label">Last Name</div>
+                  <div className="form-label">{t("staff.form.last_name")}</div>
                   <input className="form-input" required value={form.lastName} onChange={(e) => setForm(p => ({...p, lastName: e.target.value}))} />
                 </div>
               </div>
@@ -435,16 +435,16 @@ export default function StaffPage() {
                 </select>
               </div>
               <div>
-                <div className="form-label">{form.role === 'doctor' ? 'Commission Rate (%)' : 'Base/Hourly Salary'}</div>
+                <div className="form-label">{form.role === 'doctor' ? t("staff.form.commission_rate") : t("staff.form.base_hourly_salary")}</div>
                 <input className="form-input" type="number" value={form.role === 'doctor' ? form.commissionRate : form.baseSalary} onChange={(e) => setForm(p => form.role === 'doctor' ? {...p, commissionRate: e.target.value} : {...p, baseSalary: e.target.value})} />
               </div>
               <div className="form-grid">
                 <div>
-                  <div className="form-label">Phone</div>
+                  <div className="form-label">{t("staff.form.phone")}</div>
                   <input className="form-input" value={form.phone} onChange={(e) => setForm(p => ({...p, phone: e.target.value}))} />
                 </div>
                 <div>
-                  <div className="form-label">Email</div>
+                  <div className="form-label">{t("staff.form.email")}</div>
                   <input className="form-input" type="email" value={form.email} onChange={(e) => setForm(p => ({...p, email: e.target.value}))} />
                 </div>
               </div>
@@ -461,7 +461,7 @@ export default function StaffPage() {
         <div className="panel-header">
           <div>
             <div className="panel-title">{t("staff.medicines_title")}</div>
-            <div className="panel-meta">{medicines.length} items</div>
+            <div className="panel-meta">{t("staff.items_count", { count: medicines.length })}</div>
           </div>
         </div>
         {medicineError && <div className="form-error" style={{ marginBottom: '12px' }}>{medicineError}</div>}

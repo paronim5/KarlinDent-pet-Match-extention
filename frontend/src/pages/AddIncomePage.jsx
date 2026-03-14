@@ -336,7 +336,7 @@ export default function AddIncomePage() {
       </div>
       {error && <div role="alert" className="form-error" style={{ marginBottom: '16px' }}>{error}</div>}
       <form onSubmit={handleSubmit} aria-busy={saving || searching}>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px' }}>
+        <div className="income-form-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px' }}>
           <div style={{ position: 'relative' }}>
             <div className="form-label">{t("income.form.patient_compact_label")}</div>
             <input
@@ -670,7 +670,7 @@ export default function AddIncomePage() {
                 onChange={(e) => setForm((p) => ({ ...p, note: e.target.value }))}
               />
             </div>
-            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', marginTop: '24px' }}>
+            <div className="income-form-actions" style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', marginTop: '24px' }}>
               <button type="button" className="btn btn-ghost" onClick={() => navigate("/income")}>
                 {t("common.cancel")}
               </button>

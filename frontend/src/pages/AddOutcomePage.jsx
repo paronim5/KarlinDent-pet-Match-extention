@@ -470,7 +470,7 @@ export default function AddOutcomePage() {
         <div className="panel-title">{t("nav.add_outcome", { defaultValue: "Add Outcome" })}</div>
       </div>
 
-      <div className="tabs" style={{ display: 'flex', gap: '16px', marginBottom: '24px', borderBottom: '1px solid var(--border)' }}>
+      <div className="tabs outcome-tabs" style={{ display: 'flex', gap: '16px', marginBottom: '24px', borderBottom: '1px solid var(--border)' }}>
         <button
           type="button"
           className={`tab-btn ${activeTab === "general" ? "active" : ""}`}
@@ -509,7 +509,7 @@ export default function AddOutcomePage() {
 
       {activeTab === "general" && (
         <form onSubmit={handleGeneralSubmit}>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px' }}>
+          <div className="outcome-form-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px' }}>
             <div>
               <div className="form-label">{t("outcome.form.category")}</div>
               <select
@@ -570,7 +570,7 @@ export default function AddOutcomePage() {
             </div>
           </div>
 
-          <div style={{ marginTop: '24px', display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
+          <div className="outcome-form-actions" style={{ marginTop: '24px', display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
             <button type="button" className="btn btn-secondary" onClick={() => navigate("/outcome")}>
               {t("common.cancel")}
             </button>
@@ -583,7 +583,7 @@ export default function AddOutcomePage() {
 
       {activeTab === "salary" && (
         <form onSubmit={handleSalarySubmit}>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px' }}>
+          <div className="outcome-form-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px' }}>
             <div>
               <div className="form-label">{t("outcome.form.staff")}</div>
               <select
@@ -606,21 +606,21 @@ export default function AddOutcomePage() {
 
             {showTimesheetSummary && (
               <div className="panel" style={{ background: 'var(--bg-card)', padding: '16px', borderRadius: '8px' }}>
-                <div style={{ fontSize: '14px', fontWeight: '500', marginBottom: '8px' }}>Salary Breakdown</div>
+                <div style={{ fontSize: '14px', fontWeight: '500', marginBottom: '8px' }}>{t("outcome.salary_panel.breakdown")}</div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', marginBottom: '4px' }}>
-                  <span>Period:</span>
+                  <span>{t("outcome.salary_panel.period")}:</span>
                   <span>{salaryRange.from} → {salaryRange.to}</span>
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', marginBottom: '4px' }}>
-                  <span>Total Hours:</span>
+                  <span>{t("outcome.salary_panel.total_hours")}:</span>
                   <span>{timesheetSummary.totalHours.toFixed(2)}</span>
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', marginBottom: '4px' }}>
-                  <span>Base Rate:</span>
+                  <span>{t("outcome.salary_panel.base_rate")}:</span>
                   <span>{formatNumber(timesheetSummary.baseRate, { minimumFractionDigits: 2 })}</span>
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: '600', borderTop: '1px solid var(--border)', paddingTop: '4px', marginTop: '4px' }}>
-                  <span>Calculated Salary:</span>
+                  <span>{t("outcome.salary_panel.calculated_salary")}:</span>
                   <span>{formatNumber(timesheetSummary.amount, { minimumFractionDigits: 2 })}</span>
                 </div>
               </div>
@@ -628,33 +628,33 @@ export default function AddOutcomePage() {
 
             {!showTimesheetSummary && salaryMetrics && (
               <div className="panel" style={{ background: 'var(--bg-card)', padding: '16px', borderRadius: '8px' }}>
-                <div style={{ fontSize: '14px', fontWeight: '500', marginBottom: '8px' }}>Salary Breakdown</div>
+                <div style={{ fontSize: '14px', fontWeight: '500', marginBottom: '8px' }}>{t("outcome.salary_panel.breakdown")}</div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', marginBottom: '4px' }}>
-                  <span>Last Payment:</span>
-                  <span>{salaryEstimate.last_paid_at || "Never"}</span>
+                  <span>{t("outcome.salary_panel.last_payment")}:</span>
+                  <span>{salaryEstimate.last_paid_at || t("outcome.salary_panel.never")}</span>
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', marginBottom: '4px' }}>
-                  <span>Base Salary:</span>
+                  <span>{t("outcome.salary_panel.base_salary")}:</span>
                   <span>{formatNumber(salaryMetrics.baseSalary, { minimumFractionDigits: 2 })}</span>
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', marginBottom: '4px' }}>
-                  <span>Commission ({formatNumber(salaryMetrics.commissionRate * 100, { maximumFractionDigits: 2 })}% of {formatNumber(salaryMetrics.totalIncome)}):</span>
+                  <span>{t("outcome.salary_panel.commission", { rate: formatNumber(salaryMetrics.commissionRate * 100, { maximumFractionDigits: 2 }), income: formatNumber(salaryMetrics.totalIncome) })}:</span>
                   <span>{formatNumber(salaryMetrics.commissionPart, { minimumFractionDigits: 2 })}</span>
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', marginBottom: '4px' }}>
-                  <span>Lab Fees Deduction:</span>
+                  <span>{t("outcome.salary_panel.lab_fees_deduction")}:</span>
                   <span>-{formatNumber(salaryMetrics.totalLabFees, { minimumFractionDigits: 2 })}</span>
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', marginBottom: '4px' }}>
-                  <span>Adjustments:</span>
+                  <span>{t("outcome.salary_panel.adjustments")}:</span>
                   <span>{formatNumber(salaryMetrics.adjustments, { minimumFractionDigits: 2 })}</span>
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: '600', borderTop: '1px solid var(--border)', paddingTop: '4px', marginTop: '4px' }}>
-                  <span>Total Estimated:</span>
+                  <span>{t("outcome.salary_panel.total_estimated")}:</span>
                   <span>{formatNumber(salaryMetrics.adjustedTotal, { minimumFractionDigits: 2 })}</span>
                 </div>
                 <div style={{ marginTop: '8px', fontSize: '12px', color: 'var(--text-secondary)' }}>
-                  Unpaid Patients ({salaryMetrics.unpaidPatients.length})
+                  {t("outcome.salary_panel.unpaid_patients", { count: salaryMetrics.unpaidPatients.length })}
                 </div>
                 {salaryMetrics.unpaidPatients.length > 0 && (
                   <div style={{ marginTop: '6px', display: 'grid', gap: '4px', maxHeight: '120px', overflowY: 'auto' }}>
@@ -714,17 +714,17 @@ export default function AddOutcomePage() {
           {selectedStaffId && (
             <div className="panel" style={{ marginTop: '20px', background: 'var(--bg-card)', padding: '16px', borderRadius: '8px' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
-                <div style={{ fontSize: '14px', fontWeight: '500' }}>Salary Payment Notes</div>
+                <div style={{ fontSize: '14px', fontWeight: '500' }}>{t("outcome.salary_notes.title")}</div>
                 <div style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>
-                  {salaryNotesTotal} total
+                  {t("outcome.salary_notes.total", { count: salaryNotesTotal })}
                 </div>
               </div>
-              {salaryNotesLoading && <div style={{ color: 'var(--text-secondary)' }}>Loading notes...</div>}
+              {salaryNotesLoading && <div style={{ color: 'var(--text-secondary)' }}>{t("outcome.salary_notes.loading")}</div>}
               {!salaryNotesLoading && salaryNotesError && (
                 <div className="form-error">{salaryNotesError}</div>
               )}
               {!salaryNotesLoading && !salaryNotesError && salaryNotes.length === 0 && (
-                <div style={{ color: 'var(--text-secondary)' }}>No salary notes for this staff member.</div>
+                <div style={{ color: 'var(--text-secondary)' }}>{t("outcome.salary_notes.empty")}</div>
               )}
               {!salaryNotesLoading && !salaryNotesError && salaryNotes.length > 0 && (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
@@ -747,7 +747,7 @@ export default function AddOutcomePage() {
                     disabled={salaryNotesPage <= 1}
                     onClick={() => setSalaryNotesPage((p) => Math.max(1, p - 1))}
                   >
-                    Prev
+                    {t("outcome.salary_notes.prev")}
                   </button>
                   <div style={{ alignSelf: 'center', fontSize: '12px', color: 'var(--text-secondary)' }}>
                     {salaryNotesPage} / {totalSalaryNotePages}
@@ -758,14 +758,14 @@ export default function AddOutcomePage() {
                     disabled={salaryNotesPage >= totalSalaryNotePages}
                     onClick={() => setSalaryNotesPage((p) => Math.min(totalSalaryNotePages, p + 1))}
                   >
-                    Next
+                    {t("outcome.salary_notes.next")}
                   </button>
                 </div>
               )}
             </div>
           )}
 
-          <div style={{ marginTop: '24px', display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
+          <div className="outcome-form-actions" style={{ marginTop: '24px', display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
             <button type="button" className="btn btn-secondary" onClick={() => navigate("/outcome")}>
               {t("common.cancel")}
             </button>
@@ -786,29 +786,29 @@ export default function AddOutcomePage() {
         <div className="modal-overlay">
           <div className="modal" role="dialog" aria-modal="true">
             <div className="modal-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <div>Salary Report Signature</div>
+              <div>{t("outcome.signature.title")}</div>
               <button
                 type="button"
                 className="btn btn-ghost"
                 onClick={() => setSignatureModalOpen(false)}
                 disabled={signatureSubmitting}
               >
-                Close
+                {t("outcome.signature.close")}
               </button>
             </div>
             <div className="modal-body" style={{ color: 'var(--text)' }}>
               <div style={{ display: 'grid', gap: '16px' }}>
                 <div>
-                  <div className="form-label">Signer Name</div>
+                  <div className="form-label">{t("outcome.signature.signer_name")}</div>
                   <input
                     className="form-input"
                     value={signerName}
-                    placeholder="Type full name"
+                    placeholder={t("outcome.signature.signer_placeholder")}
                     readOnly
                   />
                 </div>
                 <div>
-                  <div className="form-label">Digital Signature</div>
+                  <div className="form-label">{t("outcome.signature.digital_signature")}</div>
                   <div style={{ border: '1px solid var(--border)', borderRadius: '10px', padding: '8px', background: 'var(--surface)' }}>
                     <canvas
                       ref={signatureCanvasRef}
@@ -828,7 +828,7 @@ export default function AddOutcomePage() {
             </div>
             <div className="modal-actions">
               <button type="button" className="btn btn-secondary" onClick={clearSignature} disabled={signatureSubmitting}>
-                Clear
+                {t("outcome.signature.clear")}
               </button>
               <button
                 type="button"
@@ -836,7 +836,7 @@ export default function AddOutcomePage() {
                 onClick={handleRecordSalaryWithSignature}
                 disabled={signatureSubmitting || !hasSignature || !signerName.trim() || !canSign}
               >
-                {signatureSubmitting ? "Recording..." : "Record Salary & Sign"}
+                {signatureSubmitting ? t("outcome.signature.recording") : t("outcome.signature.record_and_sign")}
               </button>
             </div>
           </div>
