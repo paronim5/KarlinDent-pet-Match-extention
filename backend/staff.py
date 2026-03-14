@@ -514,6 +514,19 @@ def build_salary_report_pdf(report: Dict[str, Any], signature_info: Optional[Dic
         try:
             if isinstance(value, (str, os.PathLike)):
                 with PILImage.open(value) as img:
+                    img = img.convert("RGBA")
+                    px = img.load()
+                    width, height = img.size
+                    for y in range(height):
+                        for x in range(width):
+                            r, g, b, a = px[x, y]
+                            if a <= 8:
+                                continue
+                            brightness = (0.299 * r) + (0.587 * g) + (0.114 * b)
+                            if brightness > 245:
+                                px[x, y] = (0, 0, 0, max(a, 220))
+                            else:
+                                px[x, y] = (0, 0, 0, a)
                     output = io.BytesIO()
                     img.save(output, format="PNG")
                     output.seek(0)
@@ -524,6 +537,19 @@ def build_salary_report_pdf(report: Dict[str, Any], signature_info: Optional[Dic
                 except Exception:
                     pass
                 with PILImage.open(value) as img:
+                    img = img.convert("RGBA")
+                    px = img.load()
+                    width, height = img.size
+                    for y in range(height):
+                        for x in range(width):
+                            r, g, b, a = px[x, y]
+                            if a <= 8:
+                                continue
+                            brightness = (0.299 * r) + (0.587 * g) + (0.114 * b)
+                            if brightness > 245:
+                                px[x, y] = (0, 0, 0, max(a, 220))
+                            else:
+                                px[x, y] = (0, 0, 0, a)
                     output = io.BytesIO()
                     img.save(output, format="PNG")
                     output.seek(0)
@@ -616,6 +642,14 @@ def build_salary_report_pdf(report: Dict[str, Any], signature_info: Optional[Dic
         fontName="Helvetica",
         fontSize=8.5,
         leading=10.5,
+    )
+    signature_detail_style = ParagraphStyle(
+        "SignatureDetail",
+        parent=normal_style,
+        fontName="Helvetica-Bold",
+        fontSize=12,
+        leading=14,
+        textColor=colors.HexColor("#111827"),
     )
 
     staff_name = " ".join(filter(None, [report["staff"]["first_name"], report["staff"]["last_name"]])).strip()
@@ -768,11 +802,12 @@ def build_salary_report_pdf(report: Dict[str, Any], signature_info: Optional[Dic
         legal_style,
     ))
 
+    signature_canvas_image = None
     if signature_info:
         elements.append(Spacer(1, 12))
         signature_table_data = [
-            [Paragraph("Signer Name", label_style), Paragraph(signature_info.get("signer_name", ""), normal_style)],
-            [Paragraph("Signed At (UTC)", label_style), Paragraph(signature_info.get("signed_at", ""), normal_style)],
+            [Paragraph("Signer Name", label_style), Paragraph(signature_info.get("signer_name", ""), signature_detail_style)],
+            [Paragraph("Signed At (UTC)", label_style), Paragraph(signature_info.get("signed_at", ""), signature_detail_style)],
             [Paragraph("Signature Hash", label_style), Paragraph(wrap_token(signature_info.get("signature_hash", "")), token_style)],
         ]
         if signature_info.get("signature_token"):
@@ -782,17 +817,16 @@ def build_salary_report_pdf(report: Dict[str, Any], signature_info: Optional[Dic
             ])
         signature_table = Table(signature_table_data, colWidths=[44 * mm, 128 * mm])
         signature_table.setStyle(TableStyle([
-            ("GRID", (0, 0), (-1, -1), 0.5, border_color),
+            ("GRID", (0, 0), (-1, -1), 2.0, colors.HexColor("#111827")),
             ("LEFTPADDING", (0, 0), (-1, -1), 8),
             ("RIGHTPADDING", (0, 0), (-1, -1), 8),
             ("TOPPADDING", (0, 0), (-1, -1), 7),
             ("BOTTOMPADDING", (0, 0), (-1, -1), 7),
-            ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#fff7ed")),
+            ("BACKGROUND", (0, 0), (-1, -1), colors.white),
             ("VALIGN", (0, 0), (-1, -1), "TOP"),
         ]))
         elements.append(signature_table)
         if signature_info.get("signature_image"):
-            elements.append(Spacer(1, 8))
             image_source = normalize_signature_image(signature_info["signature_image"])
             if image_source is None:
                 logger.warning("Unsupported signature image type: %s", type(signature_info["signature_image"]))
@@ -802,12 +836,7 @@ def build_salary_report_pdf(report: Dict[str, Any], signature_info: Optional[Dic
                     logger.warning("Signature image skipped")
                 else:
                     try:
-                        signature_image = Image(
-                            image_source,
-                            width=70 * mm,
-                            height=18 * mm,
-                        )
-                        elements.append(signature_image)
+                        signature_canvas_image = ImageReader(image_source)
                     except Exception as exc:
                         logger.warning("Signature image skipped: %s", exc)
 
@@ -820,16 +849,67 @@ def build_salary_report_pdf(report: Dict[str, Any], signature_info: Optional[Dic
         canvas.drawString(16 * mm, 11 * mm, "Generated by KarlinDent payroll system")
         canvas.drawRightString(194 * mm, 11 * mm, f"Page {doc_ref.page}")
         canvas.setFillColor(colors.black)
-        canvas.setFont("Helvetica", 9)
-        canvas.drawString(16 * mm, 22 * mm, "Digital Signature Field:")
-        if hasattr(canvas, "acroForm") and hasattr(canvas.acroForm, "signature"):
-            canvas.acroForm.signature(
-                name="signature",
-                x=58 * mm,
-                y=18 * mm,
-                width=80 * mm,
-                height=14 * mm,
-                borderStyle="underlined",
+        block_width = 90 * mm
+        block_height = 38 * mm
+        block_x = A4[0] - doc.rightMargin - block_width
+        block_y = 20 * mm
+
+        canvas.setDash(4, 2)
+        canvas.setStrokeColor(colors.HexColor("#111827"))
+        canvas.setFillColor(colors.white)
+        canvas.setLineWidth(2)
+        canvas.rect(block_x, block_y, block_width, block_height, stroke=1, fill=1)
+        canvas.setDash()
+
+        canvas.setFillColor(colors.HexColor("#111827"))
+        canvas.rect(block_x, block_y + block_height - (8 * mm), block_width, 8 * mm, stroke=0, fill=1)
+        canvas.setFillColor(colors.white)
+        canvas.setFont("Helvetica-Bold", 10)
+        canvas.drawString(block_x + (3 * mm), block_y + block_height - (5.5 * mm), "DIGITAL SIGNATURE")
+
+        signer_name = "Not Signed"
+        signed_at = "Pending"
+        if signature_info:
+            signer_name = str(signature_info.get("signer_name") or "Not Signed")
+            signed_at = str(signature_info.get("signed_at") or "Pending")
+
+        canvas.setFillColor(colors.HexColor("#111827"))
+        canvas.setFont("Helvetica-Bold", 12)
+        canvas.drawString(block_x + (3 * mm), block_y + (16 * mm), f"Signer: {signer_name[:34]}")
+        canvas.drawString(block_x + (3 * mm), block_y + (10 * mm), f"Time: {signed_at[:34]}")
+
+        if signature_canvas_image:
+            try:
+                canvas.drawImage(
+                    signature_canvas_image,
+                    block_x + (3 * mm),
+                    block_y + (1.8 * mm),
+                    width=block_width - (6 * mm),
+                    height=8.8 * mm,
+                    preserveAspectRatio=True,
+                    mask="auto",
+                )
+            except Exception:
+                pass
+
+        if hasattr(canvas, "acroForm") and hasattr(canvas.acroForm, "textfield"):
+            canvas.acroForm.textfield(
+                name=f"signature_display_page_{doc_ref.page}",
+                x=block_x + (2 * mm),
+                y=block_y + (19 * mm),
+                width=block_width - (4 * mm),
+                height=7 * mm,
+                value=f"{signer_name} | {signed_at}",
+                borderStyle="solid",
+                borderWidth=0.5,
+                borderColor=colors.HexColor("#111827"),
+                fillColor=None,
+                textColor=colors.HexColor("#111827"),
+                fontName="Helvetica-Bold",
+                fontSize=12,
+                annotationFlags="print",
+                fieldFlags="readOnly",
+                forceBorder=True,
             )
         canvas.drawString(16 * mm, 6 * mm, "By signing, you confirm the salary amount and payment details.")
 

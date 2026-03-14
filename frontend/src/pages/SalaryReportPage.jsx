@@ -62,7 +62,7 @@ export default function SalaryReportPage() {
     ctx.scale(ratio, ratio);
     ctx.lineWidth = 2;
     ctx.lineCap = "round";
-    ctx.strokeStyle = "#f5f0dc";
+    ctx.strokeStyle = "#111827";
   }, []);
 
   useEffect(() => {

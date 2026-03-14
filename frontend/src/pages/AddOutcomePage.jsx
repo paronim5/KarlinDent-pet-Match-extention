@@ -383,7 +383,7 @@ export default function AddOutcomePage() {
     ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
     ctx.lineWidth = 2;
     ctx.lineCap = "round";
-    ctx.strokeStyle = "#f1f5f9";
+    ctx.strokeStyle = "#10e055ff";
   }, [signatureModalOpen]);
 
   useEffect(() => {
